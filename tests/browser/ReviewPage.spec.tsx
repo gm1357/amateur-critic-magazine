@@ -30,6 +30,32 @@ test('the page number follows the URL, not the click history', async () => {
   await expect.element(screen.getByText(`3 / ${reviews.length + 1}`)).toBeVisible();
 });
 
+test('an unknown slug gets a not-found page with no magazine chrome', async () => {
+  const screen = await render(
+    <MemoryRouter initialEntries={['/reviews/not-a-real-movie']}>
+      <App />
+    </MemoryRouter>,
+  );
+
+  await expect
+    .element(screen.getByRole('heading', { level: 1 }))
+    .toHaveTextContent('This page was never printed');
+  await expect.element(screen.getByRole('link', { name: 'Back to the cover' })).toBeVisible();
+  expect(screen.getByText(/^\d+ \/ \d+$/).elements()).toHaveLength(0);
+});
+
+test('a path outside the magazine gets the not-found page too', async () => {
+  const screen = await render(
+    <MemoryRouter initialEntries={['/some/random/path']}>
+      <App />
+    </MemoryRouter>,
+  );
+
+  await expect
+    .element(screen.getByRole('heading', { level: 1 }))
+    .toHaveTextContent('This page was never printed');
+});
+
 test('the dateline is human-readable and carries the raw ISO date', async () => {
   const screen = await render(
     <MemoryRouter initialEntries={['/reviews/the-lighthouse']}>
