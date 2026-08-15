@@ -23,7 +23,7 @@ test('the next link moves from the cover to the first review', async () => {
   await screen.getByRole('link', { name: 'Next' }).click();
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(first.movie);
-  await expect.element(screen.getByText(first.score.toFixed(1))).toBeVisible();
+  await expect.element(screen.getByRole('img', { name: `${first.score} out of 10` })).toBeVisible();
   await expect.element(screen.getByText(`2 / ${total}`)).toBeVisible();
 });
 

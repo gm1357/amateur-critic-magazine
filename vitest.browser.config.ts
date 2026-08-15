@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [tailwindcss(), react()],
   test: {
     dir: 'tests/browser',
+    setupFiles: ['./vitest.browser.setup.ts'],
     browser: {
       enabled: true,
       provider: playwright(),

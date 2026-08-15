@@ -20,6 +20,14 @@ test('slugs are unique and URL-safe', () => {
   }
 });
 
+test('every score is a whole number from 1 to 10', () => {
+  for (const review of reviews) {
+    expect(Number.isInteger(review.score)).toBe(true);
+    expect(review.score).toBeGreaterThanOrEqual(1);
+    expect(review.score).toBeLessThanOrEqual(10);
+  }
+});
+
 test('reviews run oldest first', () => {
   const dates = reviews.map((review) => review.date);
 

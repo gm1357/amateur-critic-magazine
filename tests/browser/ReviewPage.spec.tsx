@@ -16,8 +16,30 @@ test('a review page shows the movie, score, dateline and body', async () => {
   );
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(review.movie);
-  await expect.element(screen.getByText(review.score.toFixed(1))).toBeVisible();
+  await expect
+    .element(screen.getByRole('img', { name: `${review.score} out of 10` }))
+    .toBeVisible();
   await expect.element(screen.getByText(review.text.slice(0, 40), { exact: false })).toBeVisible();
+});
+
+test('an odd score fills exactly half a star', async () => {
+  // The Lighthouse scores 7, so 3 and a half of the five stars should be filled.
+  const screen = await render(
+    <MemoryRouter initialEntries={['/reviews/the-lighthouse']}>
+      <App />
+    </MemoryRouter>,
+  );
+
+  const badge = screen.getByRole('img', { name: '7 out of 10' });
+  await expect.element(badge).toBeVisible();
+
+  // Measured rather than read off the style attribute, so this fails if the fill row
+  // ever stops lining up with the track it is clipped against.
+  const rows = badge.element().querySelectorAll('span');
+  const track = rows[0].getBoundingClientRect().width;
+  const fill = rows[1].getBoundingClientRect().width;
+
+  expect(fill / track).toBeCloseTo(0.7, 2);
 });
 
 test('the page number follows the URL, not the click history', async () => {

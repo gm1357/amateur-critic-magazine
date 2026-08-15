@@ -44,6 +44,7 @@ A movie-review aggregator that reads like a print magazine: `/` is the cover, an
 ### Review data
 
 - Reviews are JSON files in `src/data/reviews/<slug>.json` with `movie`, `score`, `date` (ISO `YYYY-MM-DD`), and `review`. **The filename is the slug.**
+- `score` is a **whole number from 1 to 10**, rendered by `ScoreBadge` as five stars at one point per half star. The half star is a clip, not a glyph: two identical star rows are stacked and the filled one is clipped to `score * 10`% of the width, so the cut always lands on a glyph edge or its exact midpoint. The badge carries `role="img"` with an `aria-label` of `"<score> out of 10"` — that label is what tests locate it by.
 - `src/data/reviews.ts` picks them up with `import.meta.glob({ eager: true })` and sorts by `date` ascending, tie-broken by slug (glob key order is not stable across platforms).
 - `src/data/review.ts` hand-rolls validation and throws naming the offending file and field. Date checking is two-step — an ISO shape test plus a `Date` round-trip — because `new Date('2026-02-31')` silently rolls over rather than failing.
 - Because the glob is eager, the parser runs at **module evaluation**, so a malformed JSON does not fail `vite build` — it blanks the page at runtime. `tests/unit/reviews-data.spec.ts` imports the real `reviews` array specifically to turn that into a failing test run.

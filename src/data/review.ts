@@ -6,7 +6,9 @@ export type Review = {
   text: string;
 };
 
-const SCORE_MIN = 0;
+// Whole points only, 1 to 10 — each point renders as half a star, so the scale is
+// really "how many half-stars", and a fraction would have nothing to draw.
+const SCORE_MIN = 1;
 const SCORE_MAX = 10;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -31,6 +33,9 @@ function requireText(value: unknown, field: string, file: string): string {
 function requireScore(value: unknown, file: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     fail(file, `field "score" must be a finite number, got ${describe(value)}`);
+  }
+  if (!Number.isInteger(value)) {
+    fail(file, `field "score" must be a whole number, got ${value}`);
   }
   if (value < SCORE_MIN || value > SCORE_MAX) {
     fail(file, `field "score" must be between ${SCORE_MIN} and ${SCORE_MAX}, got ${value}`);

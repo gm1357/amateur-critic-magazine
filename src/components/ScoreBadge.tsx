@@ -1,13 +1,27 @@
+// Five stars, one point per half star. Two identical rows of glyphs are stacked and the
+// filled one is clipped to score/10 of the width — because both rows are the same string
+// in the same font, the clip lands exactly on a glyph or its midpoint, which is what
+// makes half stars land true without measuring anything.
+const STARS = '★★★★★';
+
 type ScoreBadgeProps = {
   score: number;
 };
 
 export default function ScoreBadge({ score }: ScoreBadgeProps) {
   return (
-    <p className="inline-flex items-baseline gap-1.5 rounded-full border border-rule px-4 py-1">
-      <span className="text-[11px] tracking-[0.18em] text-muted uppercase">Score</span>
-      <span className="text-lg tabular-nums text-accent">{score.toFixed(1)}</span>
-      <span className="text-xs text-muted">/ 10</span>
+    <p
+      aria-label={`${score} out of 10`}
+      className="relative inline-block text-xl leading-none whitespace-nowrap"
+      role="img"
+    >
+      <span className="text-rule">{STARS}</span>
+      <span
+        className="absolute inset-y-0 left-0 overflow-hidden text-accent"
+        style={{ width: `${score * 10}%` }}
+      >
+        {STARS}
+      </span>
     </p>
   );
 }

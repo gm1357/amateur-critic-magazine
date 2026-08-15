@@ -11,13 +11,13 @@ Drop a JSON file into `src/data/reviews/`. **The filename is the URL slug** — 
 ```json
 {
   "movie": "The Lighthouse",
-  "score": 8.4,
+  "score": 7,
   "date": "2026-03-22",
   "review": "First paragraph...\n\nSecond paragraph..."
 }
 ```
 
-- `score` is a number from 0 to 10.
+- `score` is a whole number from 1 to 10 — no fractions. It renders as five stars, one point per half star, so a 7 shows three and a half.
 - `date` is an ISO calendar date, `YYYY-MM-DD`. It sets the review's position in the issue — pages run oldest first.
 - `review` is the body. Separate paragraphs with a blank line (`\n\n`); the first one gets the drop cap.
 
