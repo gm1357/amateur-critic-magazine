@@ -20,6 +20,16 @@ test('a review page shows the movie, score, dateline and body', async () => {
   await expect.element(screen.getByText(review.text.slice(0, 40), { exact: false })).toBeVisible();
 });
 
+test('the page number follows the URL, not the click history', async () => {
+  const screen = await render(
+    <MemoryRouter initialEntries={[`/reviews/${review.slug}`]}>
+      <App />
+    </MemoryRouter>,
+  );
+
+  await expect.element(screen.getByText(`3 / ${reviews.length + 1}`)).toBeVisible();
+});
+
 test('the dateline is human-readable and carries the raw ISO date', async () => {
   const screen = await render(
     <MemoryRouter initialEntries={['/reviews/the-lighthouse']}>

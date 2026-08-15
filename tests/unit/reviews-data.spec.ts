@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import { findReview, reviews } from '../../src/data/reviews';
+import { buildPages, findPageIndex, pages } from '../../src/pages';
 
 // Importing `reviews` evaluates the glob, which runs the parser over every committed
 // JSON file. That is what turns a malformed review into a failing CI run — `vite build`
@@ -29,4 +30,20 @@ test('findReview looks up by slug and misses cleanly', () => {
   expect(findReview(reviews[0].slug)).toBe(reviews[0]);
   expect(findReview('not-a-real-movie')).toBeUndefined();
   expect(findReview(undefined)).toBeUndefined();
+});
+
+test('the cover is page one and every review follows it', () => {
+  expect(buildPages(reviews)[0].path).toBe('/');
+  expect(pages.length).toBe(reviews.length + 1);
+});
+
+test('findPageIndex maps a pathname to its page', () => {
+  expect(findPageIndex(pages, '/')).toBe(0);
+  expect(findPageIndex(pages, `/reviews/${reviews[0].slug}`)).toBe(1);
+  expect(findPageIndex(pages, `/reviews/${reviews[0].slug}/`)).toBe(1);
+});
+
+test('findPageIndex returns -1 for anything outside the issue', () => {
+  expect(findPageIndex(pages, '/reviews/not-a-real-movie')).toBe(-1);
+  expect(findPageIndex(pages, '/some/random/path')).toBe(-1);
 });
