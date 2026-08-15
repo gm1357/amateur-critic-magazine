@@ -1,6 +1,6 @@
 import { render } from 'vitest-browser-react';
 import { expect, test } from 'vitest';
-import App from '../src/App';
+import App from '../../src/App';
 
 test('counter button increments the count', async () => {
   const screen = await render(<App />);
