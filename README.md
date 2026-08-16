@@ -1,6 +1,6 @@
 # Amateur Critic Magazine
 
-A movie-review aggregator that reads like a print magazine. You land on the cover; every page after that is one review. Page with the Prev/Next links, the left and right arrow keys, or by linking straight to a review.
+A movie-review aggregator that reads like a print magazine. You land on the cover; every page after that is one review. Page through with the Prev/Next links, the left and right arrow keys, or by linking straight to a review.
 
 Built with Vite, React 19, react-router and Tailwind v4.
 
