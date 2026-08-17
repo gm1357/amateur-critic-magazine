@@ -1,109 +1,96 @@
+@import 'tailwindcss';
+
+/* Palette lives in plain custom properties so `prefers-color-scheme` can swap it;
+   `@theme inline` below then resolves the utilities through these at the use site. */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --paper: #fbfaf7;
+  --desk: #eae7e0;
+  --ink: #08060d;
+  --muted: #6b6375;
+  --rule: #e5e4e7;
+  --accent: #b3282d;
+}
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #141317;
+    --desk: #0a090c;
+    --ink: #f3f4f6;
+    --muted: #9ca3af;
+    --rule: #2e303a;
+    --accent: #ff7a75;
+  }
+}
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
+/* Paper is paper on a printer too — the dark palette would otherwise print as a black
+   sheet. Last one wins, so this has to sit after the dark override. */
+@media print {
+  :root {
+    --paper: #ffffff;
+    --desk: #ffffff;
+    --ink: #000000;
+    --muted: #4b4b52;
+    --rule: #c9c8cc;
+    --accent: #b3282d;
+  }
+}
+
+@theme inline {
+  --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Iowan Old Style', Palatino, 'Book Antiqua', Georgia, serif;
+  --color-paper: var(--paper);
+  --color-desk: var(--desk);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+}
+
+:root {
   color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  /* The margin of desk left showing around the sheet. The sheet subtracts it from both
+     axes when it sizes itself, so the two can never drift apart. */
+  --sheet-gutter: 1rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-body {
+@page {
+  size: A4 portrait;
   margin: 0;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
+/* A page of the issue is a sheet of A4 — 210 x 297 mm, ISO 216. The width is physical A4,
+   then capped by whichever viewport axis runs out first, so the whole sheet is on screen
+   at once and the proportion is identical at every size. Height comes from the ratio
+   rather than from the content: a review that outruns the page scrolls inside it, which
+   is what keeps the paper A4 instead of merely A4-wide. */
+@utility a4-sheet {
+  width: min(
+    210mm,
+    calc(100vw - var(--sheet-gutter) * 2),
+    calc((100svh - var(--sheet-gutter) * 2) * 210 / 297)
+  );
+  aspect-ratio: 210 / 297;
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+  /* On paper the sheet is the page, so it takes its true size and drops the desk chrome. */
+  @media print {
+    width: 210mm;
+    height: 297mm;
   }
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+@utility drop-cap {
+  &::first-letter {
+    /* `float` rather than `initial-letter` — Firefox is one of the CI browsers. */
+    float: left;
+    font-family: var(--font-heading);
+    font-size: 3.6em;
+    line-height: 0.82;
+    padding: 0.06em 0.1em 0 0;
+    color: var(--accent);
   }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }

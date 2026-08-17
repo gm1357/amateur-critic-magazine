@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.vitest-attachments/*
+tests/browser/__screenshots__/*

@@ -1,11 +1,13 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
   test: {
     dir: 'tests/browser',
+    setupFiles: ['./vitest.browser.setup.ts'],
     browser: {
       enabled: true,
       provider: playwright(),
