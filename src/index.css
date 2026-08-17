@@ -4,6 +4,7 @@
    `@theme inline` below then resolves the utilities through these at the use site. */
 :root {
   --paper: #fbfaf7;
+  --desk: #eae7e0;
   --ink: #08060d;
   --muted: #6b6375;
   --rule: #e5e4e7;
@@ -13,6 +14,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --paper: #141317;
+    --desk: #0a090c;
     --ink: #f3f4f6;
     --muted: #9ca3af;
     --rule: #2e303a;
@@ -20,10 +22,24 @@
   }
 }
 
+/* Paper is paper on a printer too — the dark palette would otherwise print as a black
+   sheet. Last one wins, so this has to sit after the dark override. */
+@media print {
+  :root {
+    --paper: #ffffff;
+    --desk: #ffffff;
+    --ink: #000000;
+    --muted: #4b4b52;
+    --rule: #c9c8cc;
+    --accent: #b3282d;
+  }
+}
+
 @theme inline {
   --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-heading: 'Iowan Old Style', Palatino, 'Book Antiqua', Georgia, serif;
   --color-paper: var(--paper);
+  --color-desk: var(--desk);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-rule: var(--rule);
@@ -36,6 +52,35 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* The margin of desk left showing around the sheet. The sheet subtracts it from both
+     axes when it sizes itself, so the two can never drift apart. */
+  --sheet-gutter: 1rem;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+/* A page of the issue is a sheet of A4 — 210 x 297 mm, ISO 216. The width is physical A4,
+   then capped by whichever viewport axis runs out first, so the whole sheet is on screen
+   at once and the proportion is identical at every size. Height comes from the ratio
+   rather than from the content: a review that outruns the page scrolls inside it, which
+   is what keeps the paper A4 instead of merely A4-wide. */
+@utility a4-sheet {
+  width: min(
+    210mm,
+    calc(100vw - var(--sheet-gutter) * 2),
+    calc((100svh - var(--sheet-gutter) * 2) * 210 / 297)
+  );
+  aspect-ratio: 210 / 297;
+
+  /* On paper the sheet is the page, so it takes its true size and drops the desk chrome. */
+  @media print {
+    width: 210mm;
+    height: 297mm;
+  }
 }
 
 @utility drop-cap {

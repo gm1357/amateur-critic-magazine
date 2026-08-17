@@ -14,7 +14,7 @@ type DatelineProps = {
 
 export default function Dateline({ date }: DatelineProps) {
   return (
-    <time className="text-[13px] tracking-[0.08em] text-muted" dateTime={date}>
+    <time className="text-[0.8125em] tracking-[0.08em] text-muted" dateTime={date}>
       {formatter.format(new Date(date))}
     </time>
   );

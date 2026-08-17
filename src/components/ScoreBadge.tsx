@@ -12,7 +12,7 @@ export default function ScoreBadge({ score }: ScoreBadgeProps) {
   return (
     <p
       aria-label={`${score} out of 10`}
-      className="relative inline-block text-xl leading-none whitespace-nowrap"
+      className="relative inline-block text-[1.25em] leading-none whitespace-nowrap"
       role="img"
     >
       <span className="text-rule">{STARS}</span>

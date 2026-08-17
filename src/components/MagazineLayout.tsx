@@ -30,19 +30,27 @@ export default function MagazineLayout() {
   }, [navigate, next, previous]);
 
   return (
-    <div className="mx-auto flex min-h-svh w-[1126px] max-w-full flex-col border-x border-rule bg-paper font-sans text-muted">
-      {/* The cover is its own masthead, so the running head starts on page two. */}
-      {index > 0 && (
-        <header className="border-b border-rule py-3 text-center text-xs tracking-[0.3em] text-muted uppercase">
-          {MAGAZINE_TITLE}
-        </header>
-      )}
+    <div className="flex min-h-svh items-center justify-center bg-desk p-(--sheet-gutter) print:block print:p-0">
+      {/* `@container` makes the sheet — not the viewport — the ruler for the type, so a
+          page scaled down to a phone keeps the proportions it has at full A4. */}
+      <div className="a4-sheet @container flex flex-col overflow-hidden border border-rule bg-paper font-sans text-muted shadow-lg print:border-0 print:shadow-none">
+        {/* The cover is its own masthead, so the running head starts on page two. */}
+        {index > 0 && (
+          <header className="border-b border-rule py-3 text-center text-xs tracking-[0.3em] text-muted uppercase">
+            {MAGAZINE_TITLE}
+          </header>
+        )}
 
-      <Outlet />
+        {/* min-h-0 lets this shrink below its content, which is what moves the overflow
+            of a long review inside the sheet instead of stretching the paper. */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <Outlet />
+        </div>
 
-      {index >= 0 && (
-        <PageNav current={index + 1} next={next} previous={previous} total={pages.length} />
-      )}
+        {index >= 0 && (
+          <PageNav current={index + 1} next={next} previous={previous} total={pages.length} />
+        )}
+      </div>
     </div>
   );
 }

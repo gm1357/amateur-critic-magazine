@@ -14,7 +14,7 @@ export default function PageNav({ previous, next, current, total }: PageNavProps
   return (
     <nav
       aria-label="Pages"
-      className="mt-auto grid grid-cols-3 items-center border-t border-rule px-6 py-4"
+      className="mt-auto grid grid-cols-3 items-center border-t border-rule px-[6%] py-4"
     >
       {previous ? (
         <Link className={`${linkClass} justify-self-start`} rel="prev" to={previous.path}>

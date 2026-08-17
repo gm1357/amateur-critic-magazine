@@ -16,10 +16,10 @@ export default function ReviewPage() {
   const paragraphs = review.text.split(/\n{2,}/);
 
   return (
-    <article className="flex flex-1 flex-col items-center px-6 py-16">
+    <article className="flex flex-1 flex-col items-center px-[9%] py-[6%] text-[clamp(0.8125rem,2cqw,1rem)]">
       <header className="flex w-full max-w-[62ch] flex-col gap-5">
-        <p className="text-[11px] tracking-[0.24em] text-accent uppercase">Review</p>
-        <h1 className="font-heading text-5xl tracking-tight text-balance text-ink">
+        <p className="text-[0.7em] tracking-[0.24em] text-accent uppercase">Review</p>
+        <h1 className="font-heading text-[clamp(1.5rem,6cqw,3rem)] tracking-tight text-balance text-ink">
           {review.movie}
         </h1>
         <div className="flex flex-wrap items-center gap-4 border-b border-rule pb-6">
