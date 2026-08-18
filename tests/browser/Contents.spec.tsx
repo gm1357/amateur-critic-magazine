@@ -59,9 +59,10 @@ test('the folio beside each title is the page the review is actually on', async 
   const entries = screen.getByRole('listitem').elements();
 
   // The first review is page three: the cover, then this page, then the reviews.
-  entries.forEach((entry, index) => {
-    expect(entry.textContent).toContain(String(index + 3));
-  });
+  for (let index = 0; index < entries.length; index++) {
+    const folio = entries[index].querySelector('span.tabular-nums');
+    expect(folio?.textContent?.trim()).toBe(String(index + 3));
+  }
 });
 
 test('following an entry opens that review', async () => {
