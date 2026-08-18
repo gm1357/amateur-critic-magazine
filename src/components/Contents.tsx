@@ -3,7 +3,6 @@ import { reviews } from '../data/reviews';
 import { ISSUE } from '../magazine';
 import { findPageNumber, pages, reviewPath } from '../pages';
 import Dateline from './Dateline';
-import ScoreBadge from './ScoreBadge';
 
 export default function Contents() {
   return (
@@ -35,8 +34,9 @@ export default function Contents() {
               </span>
             </div>
 
-            <div className="mt-[1cqw] flex flex-wrap items-center gap-[2.5cqw]">
-              <ScoreBadge score={review.score} />
+            {/* The listing dates a review but does not score it — the verdict belongs
+                on the review's own page, not in the index. */}
+            <div className="mt-[1cqw]">
               <Dateline date={review.date} />
             </div>
           </li>
