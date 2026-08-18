@@ -2,7 +2,7 @@ import { render } from 'vitest-browser-react';
 import { expect, test } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
-import { reviews } from '../../src/data/reviews';
+import { pages } from '../../src/pages';
 
 function renderCover() {
   return render(
@@ -24,6 +24,6 @@ test('cover shows the magazine title and author', async () => {
 test('cover is page one and has nothing before it', async () => {
   const screen = await renderCover();
 
-  await expect.element(screen.getByText(`1 / ${reviews.length + 1}`)).toBeVisible();
+  await expect.element(screen.getByText(`1 / ${pages.length}`)).toBeVisible();
   expect(screen.getByRole('link', { name: 'Previous' }).elements()).toHaveLength(0);
 });

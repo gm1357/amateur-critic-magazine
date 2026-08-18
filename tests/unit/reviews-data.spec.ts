@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { findReview, reviews } from '../../src/data/reviews';
-import { buildPages, findPageIndex, pages } from '../../src/pages';
+import { buildPages, CONTENTS_PATH, findPageIndex, findPageNumber, pages } from '../../src/pages';
 
 // Importing `reviews` evaluates the glob, which runs the parser over every committed
 // JSON file. That is what turns a malformed review into a failing CI run — `vite build`
@@ -39,15 +39,29 @@ test('findReview looks up by slug and misses cleanly', () => {
   expect(findReview(undefined)).toBeUndefined();
 });
 
-test('the cover is page one and every review follows it', () => {
-  expect(buildPages(reviews)[0].path).toBe('/');
-  expect(pages.length).toBe(reviews.length + 1);
+test('the cover is page one, the contents page two, and every review follows', () => {
+  const built = buildPages(reviews);
+
+  expect(built[0].path).toBe('/');
+  expect(built[1].path).toBe(CONTENTS_PATH);
+  expect(built.slice(2).map((page) => page.label)).toEqual(reviews.map((review) => review.movie));
+  expect(pages.length).toBe(reviews.length + 2);
 });
 
 test('findPageIndex maps a pathname to its page', () => {
   expect(findPageIndex(pages, '/')).toBe(0);
-  expect(findPageIndex(pages, `/reviews/${reviews[0].slug}`)).toBe(1);
-  expect(findPageIndex(pages, `/reviews/${reviews[0].slug}/`)).toBe(1);
+  expect(findPageIndex(pages, CONTENTS_PATH)).toBe(1);
+  expect(findPageIndex(pages, `/reviews/${reviews[0].slug}`)).toBe(2);
+  expect(findPageIndex(pages, `/reviews/${reviews[0].slug}/`)).toBe(2);
+});
+
+// The contents prints these numbers, so a folio that disagreed with the pager would put
+// the wrong page number next to every title on it.
+test('findPageNumber is the printed folio, counting from one', () => {
+  expect(findPageNumber(pages, '/')).toBe(1);
+  expect(findPageNumber(pages, CONTENTS_PATH)).toBe(2);
+  expect(findPageNumber(pages, `/reviews/${reviews[0].slug}`)).toBe(3);
+  expect(findPageNumber(pages, '/some/random/path')).toBe(0);
 });
 
 test('findPageIndex returns -1 for anything outside the issue', () => {

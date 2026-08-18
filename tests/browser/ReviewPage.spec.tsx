@@ -3,6 +3,7 @@ import { expect, test } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
+import { pages } from '../../src/pages';
 
 // Expectations are derived from the real `reviews` array so that editing a JSON file
 // does not break tests that are not about that review.
@@ -46,7 +47,8 @@ test('the page number follows the URL, not the click history', async () => {
     </MemoryRouter>,
   );
 
-  await expect.element(screen.getByText(`3 / ${reviews.length + 1}`)).toBeVisible();
+  // Cover, contents, the first review, then this one.
+  await expect.element(screen.getByText(`4 / ${pages.length}`)).toBeVisible();
 });
 
 test('an unknown slug gets a not-found page with no magazine chrome', async () => {
