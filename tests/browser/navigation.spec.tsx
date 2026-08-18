@@ -4,8 +4,9 @@ import { userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
+import { CONTENTS_PATH, pages } from '../../src/pages';
 
-const total = reviews.length + 1;
+const total = pages.length;
 const first = reviews[0];
 const last = reviews[reviews.length - 1];
 
@@ -17,24 +18,33 @@ function renderAt(path: string) {
   );
 }
 
-test('the next link moves from the cover to the first review', async () => {
+test('the next link moves from the cover to the contents', async () => {
   const screen = await renderAt('/');
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+
+  await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Contents');
+  await expect.element(screen.getByText(`2 / ${total}`)).toBeVisible();
+});
+
+test('the next link moves from the contents to the first review', async () => {
+  const screen = await renderAt(CONTENTS_PATH);
 
   await screen.getByRole('link', { name: 'Next' }).click();
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(first.movie);
   await expect.element(screen.getByRole('img', { name: `${first.score} out of 10` })).toBeVisible();
-  await expect.element(screen.getByText(`2 / ${total}`)).toBeVisible();
+  await expect.element(screen.getByText(`3 / ${total}`)).toBeVisible();
 });
 
 test('the right arrow key turns the page', async () => {
-  const screen = await renderAt('/');
+  const screen = await renderAt(CONTENTS_PATH);
 
   // The listener is on window, so nothing needs focus first.
   await userEvent.keyboard('{ArrowRight}');
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(first.movie);
-  await expect.element(screen.getByText(`2 / ${total}`)).toBeVisible();
+  await expect.element(screen.getByText(`3 / ${total}`)).toBeVisible();
 });
 
 test('the left arrow key turns back to the cover', async () => {

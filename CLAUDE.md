@@ -31,7 +31,7 @@ Run a single Vitest test by name: `npx vitest run -t "<test name>"` (add `--conf
 
 ## Architecture
 
-A movie-review aggregator that reads like a print magazine: `/` is the cover, and each subsequent page is one review.
+A movie-review aggregator that reads like a print magazine: `/` is the cover, `/contents` is the table of contents, and each subsequent page is one review.
 
 ### The magazine
 
@@ -42,6 +42,7 @@ A movie-review aggregator that reads like a print magazine: `/` is the cover, an
 - The sheet is a `@container`, so page type is sized in `cqw` and page margins in `%`. Nothing inside a page may be sized in `vw`/`vh` or in fixed `px`: the composition has to survive the sheet being scaled down to a phone, and the ruler for that is the sheet, not the viewport.
 - `@page { size: A4 portrait }` plus a `print:` pass on the layout means Ctrl-P prints the real thing — a `@media print` palette override at the end of the palette block keeps the paper white when the reader is in dark mode.
 - Pagination is **not** derived from `useParams` — a pathless layout route cannot see its child's `:slug`. Instead `src/pages.ts` builds an ordered `Page[]` and `findPageIndex(pages, pathname)` matches on the pathname. A `-1` index means "not a page of this issue", which is the single signal that hides the running head and pager (used by the 404).
+- The contents is a page of the issue like any other, so it paginates and prints for free. It reads its folios back out of `pages` via `findPageNumber`, so a page inserted into `buildPages` renumbers the listing with it rather than leaving it to drift.
 - An unknown slug still matches `reviews/:slug`, so the wildcard route never sees it — `ReviewPage` renders `<NotFound/>` itself.
 
 ### Review data
