@@ -58,3 +58,23 @@ export function settleTarget(progress: number, velocity: number): 'to' | 'from' 
 export function remainingTravel(progress: number, settle: 'to' | 'from'): number {
   return settle === 'to' ? 1 - progress : progress;
 }
+
+// How far a finger has to travel before the magazine decides whether it is turning a page
+// or scrolling one. A fraction of a leaf rather than a pixel count, so it means the same
+// thing on a phone as on a desk.
+export function swipeThreshold(leafWidth: number): number {
+  return Math.max(leafWidth * 0.02, 8);
+}
+
+// A swipe does not say which way it is going until it has gone somewhere. Until then it is
+// neither a turn nor a scroll, and committing early is what makes a page snatch itself out
+// from under a reader who was only scrolling.
+export function swipeIntent(
+  dx: number,
+  dy: number,
+  threshold: number,
+): Direction | 'scroll' | 'pending' {
+  if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) return 'pending';
+  if (Math.abs(dy) >= Math.abs(dx)) return 'scroll';
+  return dx < 0 ? 'forward' : 'backward';
+}

@@ -5,6 +5,8 @@ import {
   prefersReducedMotion,
   remainingTravel,
   settleTarget,
+  swipeIntent,
+  swipeThreshold,
   turnDuration,
 } from './flip';
 import type { Direction, Mode } from './spread';
@@ -24,10 +26,14 @@ export type Turning = {
 
 type Gesture = {
   pointerId: number;
-  direction: Direction;
+  // Undefined until a swipe has travelled far enough to say whether it is turning a page
+  // or scrolling one. A grab on the page edge knows from the first moment.
+  direction: Direction | undefined;
   to: number;
   leafWidth: number;
+  threshold: number;
   startX: number;
+  startY: number;
   progress: number;
   lastTime: number;
   velocity: number;
@@ -40,6 +46,7 @@ export type Flip = {
   bookRef: React.RefObject<HTMLDivElement | null>;
   turnRef: React.RefObject<HTMLDivElement | null>;
   grab: (event: React.PointerEvent<HTMLElement>, direction: Direction) => void;
+  swipe: (event: React.PointerEvent<HTMLElement>) => void;
 };
 
 function directionOf(from: number, to: number): Direction {
@@ -67,10 +74,17 @@ export function useFlip(
   const gesture = useRef<Gesture | undefined>(undefined);
   const displayedMode = useRef(mode);
 
+  // A swipe that begins on a contents entry is still a swipe — most of that page is
+  // links, and refusing to turn from them would make it nearly unswipeable. So the link
+  // is followed only if the finger never went anywhere.
+  const swallowClick = useRef(false);
+
   // The window listeners below are bound once, so they read the current spread from here
   // rather than closing over a stale one.
   const displayedAt = useRef(displayed);
   displayedAt.current = displayed;
+  const spreadsAt = useRef(spreads);
+  spreadsAt.current = spreads;
 
   // Held in a ref so the window listeners below can be attached once and never re-bound.
   const turned = useRef(onTurn);
@@ -181,6 +195,11 @@ export function useFlip(
       const held = gesture.current;
       if (!held || event.pointerId !== held.pointerId) return;
 
+      if (held.direction === undefined) {
+        resolve(held, event);
+        return;
+      }
+
       const progress = dragProgress(held.direction, event.clientX - held.startX, held.leafWidth);
       const elapsed = event.timeStamp - held.lastTime;
       if (elapsed > 0) held.velocity = ((progress - held.progress) * 1000) / elapsed;
@@ -190,11 +209,52 @@ export function useFlip(
       angleTo(progress, held.direction);
     }
 
+    // A swipe that never chose a direction was a reader's finger passing through, and
+    // there is no leaf in the air to bring down.
+    function resolve(held: Gesture, event: PointerEvent) {
+      const intent = swipeIntent(
+        event.clientX - held.startX,
+        event.clientY - held.startY,
+        held.threshold,
+      );
+      if (intent === 'pending') return;
+
+      const to = intent === 'forward' ? displayedAt.current + 1 : displayedAt.current - 1;
+      if (intent === 'scroll' || to < 0 || to >= spreadsAt.current) {
+        gesture.current = undefined;
+        return;
+      }
+
+      // Measured from here rather than from where the finger landed, so the leaf starts
+      // at the reader's fingertip instead of jumping a threshold's worth to meet it.
+      held.direction = intent;
+      held.to = to;
+      held.startX = event.clientX;
+      held.lastTime = event.timeStamp;
+      swallowClick.current = true;
+
+      setTurning({
+        from: displayedAt.current,
+        to,
+        direction: intent,
+        settle: 'from',
+        progress: 0,
+      });
+      setPhase('drag');
+    }
+
     function onRelease(event: PointerEvent) {
       const held = gesture.current;
       if (!held || event.pointerId !== held.pointerId) return;
 
       gesture.current = undefined;
+      if (held.direction === undefined) return;
+
+      // The click lands in this same burst of events; anything still pending a tick later
+      // was never coming, and must not swallow the reader's next real click.
+      window.setTimeout(() => {
+        swallowClick.current = false;
+      }, 0);
 
       // A cancelled pointer is the browser deciding the gesture was someone else's — a
       // scroll, usually. The leaf falls back rather than turning on the reader.
@@ -215,14 +275,24 @@ export function useFlip(
       if (settle === 'to') turned.current(held.to);
     }
 
+    function onClick(event: MouseEvent) {
+      if (!swallowClick.current) return;
+      swallowClick.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onRelease);
     window.addEventListener('pointercancel', onRelease);
+    // Capturing, so the click is stopped before it reaches the link it started on.
+    window.addEventListener('click', onClick, true);
 
     return () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onRelease);
       window.removeEventListener('pointercancel', onRelease);
+      window.removeEventListener('click', onClick, true);
     };
   }, []);
 
@@ -254,7 +324,9 @@ export function useFlip(
       direction,
       to,
       leafWidth,
+      threshold: 0,
       startX: event.clientX,
+      startY: event.clientY,
       progress: 0,
       lastTime: event.timeStamp,
       velocity: 0,
@@ -264,5 +336,28 @@ export function useFlip(
     setPhase('drag');
   }
 
-  return { displayed, phase, turning, bookRef, turnRef, grab };
+  // A finger has the whole page to swipe across; a mouse has the page edge to take hold
+  // of, which is a more precise instrument and a less accidental one.
+  function swipe(event: React.PointerEvent<HTMLElement>) {
+    if (phase !== 'rest' || gesture.current || event.pointerType === 'mouse') return;
+
+    const leaf = bookRef.current?.querySelector('.a4-leaf');
+    const leafWidth = leaf ? leaf.getBoundingClientRect().width : 0;
+    if (leafWidth <= 0) return;
+
+    gesture.current = {
+      pointerId: event.pointerId,
+      direction: undefined,
+      to: displayed,
+      leafWidth,
+      threshold: swipeThreshold(leafWidth),
+      startX: event.clientX,
+      startY: event.clientY,
+      progress: 0,
+      lastTime: event.timeStamp,
+      velocity: 0,
+    };
+  }
+
+  return { displayed, phase, turning, bookRef, turnRef, grab, swipe };
 }

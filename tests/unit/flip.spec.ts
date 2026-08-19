@@ -5,6 +5,8 @@ import {
   flipAngle,
   remainingTravel,
   settleTarget,
+  swipeIntent,
+  swipeThreshold,
   TURN_DURATION,
   turnDuration,
 } from '../../src/flip';
@@ -89,4 +91,29 @@ test('a flick beats the halfway rule, in either direction', () => {
 test('what is left to travel depends on which way the leaf is falling', () => {
   expect(remainingTravel(0.3, 'to')).toBeCloseTo(0.7);
   expect(remainingTravel(0.3, 'from')).toBeCloseTo(0.3);
+});
+
+// Committing before the finger has said anything is what makes a page snatch itself out
+// from under a reader who was only scrolling.
+test('a swipe says nothing until it has gone somewhere', () => {
+  expect(swipeIntent(0, 0, 10)).toBe('pending');
+  expect(swipeIntent(6, 6, 10)).toBe('pending');
+});
+
+test('across the page turns it, down the page scrolls it', () => {
+  expect(swipeIntent(-40, 4, 10)).toBe('forward');
+  expect(swipeIntent(40, -4, 10)).toBe('backward');
+  expect(swipeIntent(4, 40, 10)).toBe('scroll');
+  expect(swipeIntent(-4, -40, 10)).toBe('scroll');
+});
+
+// A finger that is equally undecided is reading, not turning.
+test('a diagonal is a scroll rather than a turn', () => {
+  expect(swipeIntent(-30, 30, 10)).toBe('scroll');
+});
+
+test('the threshold means the same thing on a phone as on a desk', () => {
+  expect(swipeThreshold(1000)).toBe(20);
+  // Never so small that a resting thumb counts as a swipe.
+  expect(swipeThreshold(100)).toBe(8);
 });

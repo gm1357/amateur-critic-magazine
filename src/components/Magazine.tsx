@@ -24,7 +24,7 @@ export default function Magazine() {
   const index = findPageIndex(pages, pathname);
   const spreads = spreadCount(mode, pages);
 
-  const { bookRef, displayed, grab, phase, turnRef, turning } = useFlip(
+  const { bookRef, displayed, grab, phase, swipe, turnRef, turning } = useFlip(
     mode,
     index,
     spreads,
@@ -86,6 +86,7 @@ export default function Magazine() {
         ref={bookRef}
         left={turn ? turn.staticLeft : resting.left}
         mode={mode}
+        onSwipe={swipe}
         phase={phase}
         right={turn ? turn.staticRight : resting.right}
       >

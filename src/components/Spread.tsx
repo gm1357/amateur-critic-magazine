@@ -14,6 +14,7 @@ export default function Spread({
   index,
   left,
   mode,
+  onSwipe,
   phase,
   ref,
   right,
@@ -22,12 +23,19 @@ export default function Spread({
   index: number;
   left: Page | undefined;
   mode: Mode;
+  onSwipe: (event: React.PointerEvent<HTMLElement>) => void;
   phase: Phase;
   ref: React.Ref<HTMLDivElement>;
   right: Page | undefined;
 }) {
   return (
-    <div className="magazine-book" data-phase={phase} data-spread={index} ref={ref}>
+    <div
+      className="magazine-book"
+      data-phase={phase}
+      data-spread={index}
+      onPointerDown={onSwipe}
+      ref={ref}
+    >
       {/* One leaf at a time has no facing page at all, so the left half is not a blank
           half of a book — it does not exist. */}
       {mode === 'spread' && (left ? <Leaf page={left} /> : <Blank />)}

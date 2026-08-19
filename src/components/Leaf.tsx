@@ -6,7 +6,7 @@ import PageContent from './PageContent';
 // head and folio. That is how a magazine is actually printed, and it is what lets a leaf
 // carry its chrome with it when it turns.
 export const LEAF =
-  'a4-leaf @container flex flex-col overflow-hidden border border-rule bg-paper font-sans text-muted shadow-lg print:border-0 print:shadow-none';
+  'a4-leaf @container flex touch-pan-y flex-col overflow-hidden border border-rule bg-paper font-sans text-muted shadow-lg print:border-0 print:shadow-none';
 
 export default function Leaf({ page }: { page: Page }) {
   const folio = findPageNumber(pages, page.path);

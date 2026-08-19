@@ -208,6 +208,33 @@
   }
 }
 
+/* Paper catches the light as it lifts, darkest along the hinge it is turning about. It is
+   static rather than animated because a face is only ever on screen while its leaf is in
+   the air. The hinge is the leaf's left edge turning forward and its right edge turning
+   back, and the back face is a mirror of its own leaf, so each of the four combinations
+   shades the other way from the one beside it. */
+@theme inline {
+  --color-curl: rgb(0 0 0 / 0.18);
+}
+
+.leaf-face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+[data-side='right'] > [data-face='front']::after,
+[data-side='left'] > [data-face='back']::after {
+  background: linear-gradient(to right, var(--color-curl), transparent 42%);
+}
+
+[data-side='left'] > [data-face='front']::after,
+[data-side='right'] > [data-face='back']::after {
+  background: linear-gradient(to left, var(--color-curl), transparent 42%);
+}
+
 /* Perspective exists only while a leaf is actually turning. At rest the paper carries no
    transform at all, so type rasterises crisply and no browser is asked to composite a
    scrolling page inside a 3D context. */

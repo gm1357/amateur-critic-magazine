@@ -4,14 +4,14 @@
 // Real PointerEvents can, they are constructible in both Chromium and Firefox, and they
 // need no hit-testing, which matters here because the leaf being dragged is under the
 // cursor for the whole gesture.
-function fire(target: Element, type: string, x: number, y: number) {
+function fire(target: Element, type: string, x: number, y: number, pointerType = 'mouse') {
   target.dispatchEvent(
     new PointerEvent(type, {
       bubbles: true,
       cancelable: true,
       composed: true,
       pointerId: 1,
-      pointerType: 'mouse',
+      pointerType,
       isPrimary: true,
       button: type === 'pointermove' ? -1 : 0,
       buttons: type === 'pointerup' ? 0 : 1,
@@ -28,27 +28,43 @@ export function centreOf(element: Element): Point {
   return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
 }
 
-// Events are dispatched on the element, never on `window`: an event dispatched at the
+// Events are dispatched on an element, never on `window`: an event dispatched at the
 // window never travels down to the page, so a broken implementation would still pass.
-export async function drag(from: Point, to: Point, { release = true, steps = 12 } = {}) {
+// Each move is aimed afresh at whatever is under the pointer, the way a real one is —
+// the element the gesture began on is often gone by the second frame, because the page it
+// belonged to has just been handed to the leaf in the air.
+export async function drag(
+  from: Point,
+  to: Point,
+  { release = true, steps = 12, pointerType = 'mouse' } = {},
+) {
   const target = document.elementFromPoint(from.x, from.y);
   if (!target) throw new Error('nothing to take hold of at that point');
 
-  fire(target, 'pointerdown', from.x, from.y);
+  fire(target, 'pointerdown', from.x, from.y, pointerType);
 
+  let at = from;
   for (let step = 1; step <= steps; step++) {
     const travelled = step / steps;
-    fire(
-      target,
-      'pointermove',
-      from.x + (to.x - from.x) * travelled,
-      from.y + (to.y - from.y) * travelled,
-    );
+    at = {
+      x: from.x + (to.x - from.x) * travelled,
+      y: from.y + (to.y - from.y) * travelled,
+    };
+    fire(under(at), 'pointermove', at.x, at.y, pointerType);
     await new Promise(requestAnimationFrame);
   }
 
-  if (release) fire(target, 'pointerup', to.x, to.y);
-  return target;
+  if (release) fire(under(at), 'pointerup', at.x, at.y, pointerType);
+  return under(at);
+}
+
+function under(at: Point): Element {
+  return document.elementFromPoint(at.x, at.y) ?? document.body;
+}
+
+// A finger, which may swipe anywhere on the page rather than only on its edge.
+export function swipe(from: Point, to: Point, options: { release?: boolean; steps?: number } = {}) {
+  return drag(from, to, { ...options, pointerType: 'touch' });
 }
 
 export function cancel(target: Element, at: Point) {
