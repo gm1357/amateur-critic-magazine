@@ -1,21 +1,31 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { MAGAZINE_TITLE } from '../magazine';
 import { findPageIndex, pages } from '../pages';
+import { anchorOf, spreadAt, spreadFolio, spreadOf } from '../spread';
+import { useMode } from '../useMode';
+import { LEAF } from './Leaf';
 import NotFound from './NotFound';
-import PageContent from './PageContent';
 import PageNav from './PageNav';
+import Spread from './Spread';
 
 const EDITABLE = /^(?:INPUT|TEXTAREA|SELECT)$/;
+
+const DESK =
+  'magazine-desk flex min-h-svh flex-col items-center justify-center overflow-x-clip bg-desk p-(--sheet-gutter) print:block print:p-0';
 
 export default function Magazine() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const mode = useMode();
 
   const index = findPageIndex(pages, pathname);
-  const page = index >= 0 ? pages[index] : undefined;
-  const previous = index > 0 ? pages[index - 1] : undefined;
-  const next = index >= 0 && index < pages.length - 1 ? pages[index + 1] : undefined;
+  const spread = spreadOf(mode, index);
+
+  // Paging steps by leaf, not by page: two facing pages are one turn, so on a wide desk
+  // Next moves past both of them. Reading one leaf at a time, a leaf is a page and this is
+  // the same step it has always been.
+  const previous = index < 0 ? undefined : anchorOf(mode, pages, spread - 1);
+  const next = index < 0 ? undefined : anchorOf(mode, pages, spread + 1);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -32,30 +42,29 @@ export default function Magazine() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [navigate, next, previous]);
 
-  return (
-    <div className="flex min-h-svh items-center justify-center bg-desk p-(--sheet-gutter) print:block print:p-0">
-      {/* `@container` makes the sheet — not the viewport — the ruler for the type, so a
-          page scaled down to a phone keeps the proportions it has at full A4. */}
-      <div className="a4-sheet @container flex flex-col overflow-hidden border border-rule bg-paper font-sans text-muted shadow-lg print:border-0 print:shadow-none">
-        {/* The cover is its own masthead, so the running head starts on page two. */}
-        {index > 0 && (
-          <header className="border-b border-rule py-3 text-center text-xs tracking-[0.3em] text-muted uppercase">
-            {MAGAZINE_TITLE}
-          </header>
-        )}
-
-        {/* min-h-0 lets this shrink below its content, which is what moves the overflow
-            of a long review inside the sheet instead of stretching the paper. */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {/* A pathname the page list does not recognise was never printed. That is the
-              same -1 that hides the chrome above and below. */}
-          {page ? <PageContent page={page} /> : <NotFound />}
+  // A pathname the page list does not recognise was never printed. That -1 is the one
+  // signal for "not a page of this issue", and it takes the chrome away with it.
+  if (index < 0) {
+    return (
+      <div className={DESK} data-mode={mode}>
+        <div className="magazine-book">
+          <div className={LEAF}>
+            <NotFound />
+          </div>
         </div>
-
-        {index >= 0 && (
-          <PageNav current={index + 1} next={next} previous={previous} total={pages.length} />
-        )}
       </div>
+    );
+  }
+
+  return (
+    <div className={DESK} data-mode={mode}>
+      <Spread index={spread} mode={mode} spread={spreadAt(mode, pages, spread)} />
+      <PageNav
+        folio={spreadFolio(pages, spreadAt(mode, pages, spread))}
+        next={next}
+        previous={previous}
+        total={pages.length}
+      />
     </div>
   );
 }

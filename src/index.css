@@ -53,9 +53,17 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* The margin of desk left showing around the sheet. The sheet subtracts it from both
+  /* The margin of desk left showing around the spread. The leaf subtracts it from both
      axes when it sizes itself, so the two can never drift apart. */
   --sheet-gutter: 1rem;
+
+  /* The pager sits on the desk under the spread rather than on the paper, so the paper
+     has to give up this much height for it. PageNav is sized to match. */
+  --desk-chrome: 3.5rem;
+
+  /* How many leaves are open. `magazine-spread` raises it to two once there is desk
+     enough; everything else is measured off one leaf either way. */
+  --leaves: 1;
 }
 
 @page {
@@ -63,23 +71,69 @@
   margin: 0;
 }
 
-/* A page of the issue is a sheet of A4 — 210 x 297 mm, ISO 216. The width is physical A4,
-   then capped by whichever viewport axis runs out first, so the whole sheet is on screen
-   at once and the proportion is identical at every size. Height comes from the ratio
-   rather than from the content: a review that outruns the page scrolls inside it, which
-   is what keeps the paper A4 instead of merely A4-wide. */
-@utility a4-sheet {
-  width: min(
+/* The desk is what knows how much room there is, so the leaf width is measured here and
+   everything standing on it — the spread, the pager, later the flip's perspective — is
+   measured off that one ruler. It is physical A4, then capped by whichever axis runs out
+   first, so the whole book is on screen at once and the proportion is identical at every
+   size. */
+@utility magazine-desk {
+  --leaf-w: min(
     210mm,
-    calc(100vw - var(--sheet-gutter) * 2),
-    calc((100svh - var(--sheet-gutter) * 2) * 210 / 297)
+    calc((100vw - var(--sheet-gutter) * 2) / var(--leaves)),
+    calc((100svh - var(--sheet-gutter) * 2 - var(--desk-chrome)) * 210 / 297)
   );
+
+  &[data-mode='spread'] {
+    --leaves: 2;
+  }
+
+  /* On paper a leaf is the page: it takes its true size and the desk goes away. */
+  @media print {
+    --leaf-w: 210mm;
+    --leaves: 1;
+  }
+}
+
+/* An open magazine — one leaf, or two facing leaves once there is desk enough. */
+@utility magazine-book {
+  position: relative;
+  display: flex;
+  width: calc(var(--leaf-w) * var(--leaves));
+
+  @media print {
+    display: block;
+  }
+}
+
+/* A page of the issue is a sheet of A4 — 210 x 297 mm, ISO 216. The height comes from the
+   ratio rather than from the content: a review that outruns the page scrolls inside it,
+   which is what keeps the paper A4 instead of merely A4-wide. */
+@utility a4-leaf {
+  width: var(--leaf-w);
   aspect-ratio: 210 / 297;
 
-  /* On paper the sheet is the page, so it takes its true size and drops the desk chrome. */
   @media print {
     width: 210mm;
     height: 297mm;
+  }
+}
+
+/* The half of a spread with no page on it — the cover has nothing to face, and an even
+   page count leaves a blank recto at the back. It holds the other leaf in place and shows
+   bare desk; on paper it is not a page at all. */
+@utility leaf-blank {
+  width: var(--leaf-w);
+
+  @media print {
+    display: none;
+  }
+}
+
+/* Break between leaves rather than after them, so the last page of the issue does not
+   push a blank sheet out of the printer. */
+@media print {
+  .a4-leaf ~ .a4-leaf {
+    break-before: page;
   }
 }
 

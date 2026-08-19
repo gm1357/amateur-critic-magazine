@@ -46,9 +46,13 @@ test('the contents does not give the scores away', async () => {
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toBeVisible();
 
-  expect(screen.getByRole('img').elements()).toHaveLength(0);
+  // Scoped to the contents itself: on a wide desk the first review is the facing page,
+  // and its badge is legitimately on screen.
+  const contents = screen.container.querySelector(`[data-page="${CONTENTS_PATH}"]`)!;
+
+  expect(contents.querySelectorAll('[role="img"]')).toHaveLength(0);
   for (const review of reviews) {
-    expect(screen.getByText(`${review.score} out of 10`).elements()).toHaveLength(0);
+    expect(contents.textContent).not.toContain(`${review.score} out of 10`);
   }
 });
 
