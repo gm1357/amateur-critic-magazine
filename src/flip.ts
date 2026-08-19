@@ -28,3 +28,33 @@ export function turnDuration(reducedMotion: boolean, remaining: number): number 
   if (reducedMotion) return 0;
   return Math.round(Math.min(Math.max(TURN_DURATION * remaining, SHORTEST), TURN_DURATION));
 }
+
+// A flick: how fast the leaf has to be travelling, in leaf-widths per second, for the
+// release to complete a turn the drag never got halfway through. Set high enough that a
+// short, brisk, deliberate drag is still judged on where it got to — crossing two whole
+// pages a second is a throw, not a drag.
+export const FLICK = 2;
+
+function clamp(value: number, low: number, high: number): number {
+  return Math.min(Math.max(value, low), high);
+}
+
+// How far over the leaf is, from the drag so far. Dragging left turns forward and
+// dragging right turns back, so the two directions read the pointer with opposite signs.
+export function dragProgress(direction: Direction, dx: number, leafWidth: number): number {
+  if (leafWidth <= 0) return 0;
+  return clamp((direction === 'forward' ? -dx : dx) / leafWidth, 0, 1);
+}
+
+// Let go past halfway and the leaf falls over; let go before that and it falls back. A
+// flick beats the halfway rule in either direction, which is what makes a quick swipe work
+// without having to drag the page all the way across.
+export function settleTarget(progress: number, velocity: number): 'to' | 'from' {
+  if (velocity > FLICK) return 'to';
+  if (velocity < -FLICK) return 'from';
+  return progress > 0.5 ? 'to' : 'from';
+}
+
+export function remainingTravel(progress: number, settle: 'to' | 'from'): number {
+  return settle === 'to' ? 1 - progress : progress;
+}

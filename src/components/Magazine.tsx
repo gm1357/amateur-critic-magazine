@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { findPageIndex, pages } from '../pages';
-import { anchorOf, planTurn, spreadAt, spreadFolio, spreadOf } from '../spread';
+import { anchorOf, planTurn, spreadAt, spreadCount, spreadFolio, spreadOf } from '../spread';
 import { useFlip } from '../useFlip';
 import { useMode } from '../useMode';
 import { LEAF } from './Leaf';
 import NotFound from './NotFound';
 import PageNav from './PageNav';
 import Spread from './Spread';
+import TurnZone from './TurnZone';
 import TurnLayer from './TurnLayer';
 
 const EDITABLE = /^(?:INPUT|TEXTAREA|SELECT)$/;
@@ -21,7 +22,19 @@ export default function Magazine() {
   const mode = useMode();
 
   const index = findPageIndex(pages, pathname);
-  const { displayed, phase, turning, turnRef } = useFlip(mode, index);
+  const spreads = spreadCount(mode, pages);
+
+  const { bookRef, displayed, grab, phase, turnRef, turning } = useFlip(
+    mode,
+    index,
+    spreads,
+    // A leaf let go of is already decided, so the URL moves with the reader's hand rather
+    // than waiting for the paper to come down.
+    (spread) => {
+      const anchor = anchorOf(mode, pages, spread);
+      if (anchor) navigate(anchor.path);
+    },
+  );
 
   // Paging steps by leaf, not by page: two facing pages are one turn, so on a wide desk
   // Next moves past both of them. Reading one leaf at a time, a leaf is a page and this is
@@ -70,12 +83,17 @@ export default function Magazine() {
     <div className={DESK} data-mode={mode}>
       <Spread
         index={displayed}
+        ref={bookRef}
         left={turn ? turn.staticLeft : resting.left}
         mode={mode}
         phase={phase}
         right={turn ? turn.staticRight : resting.right}
       >
         {turn && <TurnLayer ref={turnRef} turn={turn} />}
+
+        {/* Only an edge with a page behind it can be taken hold of. */}
+        {displayed > 0 && <TurnZone direction="backward" onGrab={grab} />}
+        {displayed < spreads - 1 && <TurnZone direction="forward" onGrab={grab} />}
       </Spread>
 
       <PageNav

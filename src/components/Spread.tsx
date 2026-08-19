@@ -15,6 +15,7 @@ export default function Spread({
   left,
   mode,
   phase,
+  ref,
   right,
 }: {
   children?: React.ReactNode;
@@ -22,10 +23,11 @@ export default function Spread({
   left: Page | undefined;
   mode: Mode;
   phase: Phase;
+  ref: React.Ref<HTMLDivElement>;
   right: Page | undefined;
 }) {
   return (
-    <div className="magazine-book" data-phase={phase} data-spread={index}>
+    <div className="magazine-book" data-phase={phase} data-spread={index} ref={ref}>
       {/* One leaf at a time has no facing page at all, so the left half is not a blank
           half of a book — it does not exist. */}
       {mode === 'spread' && (left ? <Leaf page={left} /> : <Blank />)}

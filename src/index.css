@@ -141,6 +141,35 @@
    paint`: any grouping property forces `preserve-3d` to compute to `flat`, and the turn
    collapses into a 2D squash. Clipping belongs on the faces, which have no 3D children of
    their own. */
+/* The edge of the page, where a hand takes hold of it. It sits above the leaf in the air
+   so the reader can catch the next one, and it owns `touch-action: none` so a drag that
+   starts on the edge is never handed to the scroller. */
+@utility turn-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  width: calc(var(--leaf-w) * 0.09);
+  cursor: grab;
+  touch-action: none;
+
+  &[data-turn-zone='next'] {
+    right: 0;
+  }
+
+  &[data-turn-zone='previous'] {
+    left: 0;
+  }
+
+  @media print {
+    display: none;
+  }
+}
+
+[data-phase='drag'] .turn-zone {
+  cursor: grabbing;
+}
+
 @utility leaf-turn {
   position: absolute;
   top: 0;
