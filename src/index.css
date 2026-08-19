@@ -137,6 +137,63 @@
   }
 }
 
+/* The leaf in the air. It must never carry `overflow`, `opacity`, `filter` or `contain:
+   paint`: any grouping property forces `preserve-3d` to compute to `flat`, and the turn
+   collapses into a 2D squash. Clipping belongs on the faces, which have no 3D children of
+   their own. */
+@utility leaf-turn {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  width: var(--leaf-w);
+  transform-style: preserve-3d;
+  transform: rotateY(var(--flip-angle, 0deg));
+  will-change: transform;
+
+  /* The right-hand leaf is the right-hand leaf either way. The left-hand one sits at the
+     book's left half when two leaves are open, and just off the desk when one is — which
+     is the same expression, because the book is that much narrower. */
+  &[data-side='right'] {
+    right: 0;
+    transform-origin: left center;
+  }
+
+  &[data-side='left'] {
+    left: calc(var(--leaf-w) * (var(--leaves) - 2));
+    transform-origin: right center;
+  }
+
+  @media print {
+    display: none;
+  }
+}
+
+@utility leaf-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+
+  &[data-face='back'] {
+    transform: rotateY(180deg);
+  }
+}
+
+/* Perspective exists only while a leaf is actually turning. At rest the paper carries no
+   transform at all, so type rasterises crisply and no browser is asked to composite a
+   scrolling page inside a 3D context. */
+[data-phase='drag'],
+[data-phase='animate'] {
+  perspective: calc(var(--leaf-w) * 2.6);
+  perspective-origin: 50% 45%;
+}
+
+/* Nobody scrolls a page that is in the air. */
+[data-phase='drag'] .leaf-scroll,
+[data-phase='animate'] .leaf-scroll {
+  overflow: hidden;
+}
+
 @utility drop-cap {
   &::first-letter {
     /* `float` rather than `initial-letter` — Firefox is one of the CI browsers. */

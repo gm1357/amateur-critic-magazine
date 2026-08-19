@@ -101,6 +101,11 @@ test('paging forward on a wide desk moves a whole leaf', async () => {
 
   await screen.getByRole('link', { name: 'Next' }).click();
 
+  // The leaf has to come down before the halves under it are the new spread. Spread two
+  // is where it lands: reviews two and three, past both pages that were already open.
+  const book = screen.container.querySelector('[data-spread]')!;
+  await expect.poll(() => book.getAttribute('data-spread')).toBe('2');
+
   const leaves = leavesOf(screen.container);
   expect(leaves.map((leaf) => leaf.getAttribute('data-page'))).toEqual([
     reviewPath(reviews[1].slug),

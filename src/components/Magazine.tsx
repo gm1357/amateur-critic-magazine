@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { findPageIndex, pages } from '../pages';
-import { anchorOf, spreadAt, spreadFolio, spreadOf } from '../spread';
+import { anchorOf, planTurn, spreadAt, spreadFolio, spreadOf } from '../spread';
+import { useFlip } from '../useFlip';
 import { useMode } from '../useMode';
 import { LEAF } from './Leaf';
 import NotFound from './NotFound';
 import PageNav from './PageNav';
 import Spread from './Spread';
+import TurnLayer from './TurnLayer';
 
 const EDITABLE = /^(?:INPUT|TEXTAREA|SELECT)$/;
 
@@ -19,11 +21,12 @@ export default function Magazine() {
   const mode = useMode();
 
   const index = findPageIndex(pages, pathname);
-  const spread = spreadOf(mode, index);
+  const { displayed, phase, turning, turnRef } = useFlip(mode, index);
 
   // Paging steps by leaf, not by page: two facing pages are one turn, so on a wide desk
   // Next moves past both of them. Reading one leaf at a time, a leaf is a page and this is
   // the same step it has always been.
+  const spread = spreadOf(mode, index);
   const previous = index < 0 ? undefined : anchorOf(mode, pages, spread - 1);
   const next = index < 0 ? undefined : anchorOf(mode, pages, spread + 1);
 
@@ -56,9 +59,25 @@ export default function Magazine() {
     );
   }
 
+  // The halves on the desk are the ones the turning leaf is not covering; at rest they
+  // are simply the spread.
+  const resting = spreadAt(mode, pages, displayed);
+  const turn = turning
+    ? planTurn(resting, spreadAt(mode, pages, turning.to), turning.direction)
+    : undefined;
+
   return (
     <div className={DESK} data-mode={mode}>
-      <Spread index={spread} mode={mode} spread={spreadAt(mode, pages, spread)} />
+      <Spread
+        index={displayed}
+        left={turn ? turn.staticLeft : resting.left}
+        mode={mode}
+        phase={phase}
+        right={turn ? turn.staticRight : resting.right}
+      >
+        {turn && <TurnLayer ref={turnRef} turn={turn} />}
+      </Spread>
+
       <PageNav
         folio={spreadFolio(pages, spreadAt(mode, pages, spread))}
         next={next}
