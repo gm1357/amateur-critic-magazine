@@ -1,16 +1,19 @@
 import { useEffect } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { MAGAZINE_TITLE } from '../magazine';
 import { findPageIndex, pages } from '../pages';
+import NotFound from './NotFound';
+import PageContent from './PageContent';
 import PageNav from './PageNav';
 
 const EDITABLE = /^(?:INPUT|TEXTAREA|SELECT)$/;
 
-export default function MagazineLayout() {
+export default function Magazine() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
   const index = findPageIndex(pages, pathname);
+  const page = index >= 0 ? pages[index] : undefined;
   const previous = index > 0 ? pages[index - 1] : undefined;
   const next = index >= 0 && index < pages.length - 1 ? pages[index + 1] : undefined;
 
@@ -44,7 +47,9 @@ export default function MagazineLayout() {
         {/* min-h-0 lets this shrink below its content, which is what moves the overflow
             of a long review inside the sheet instead of stretching the paper. */}
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <Outlet />
+          {/* A pathname the page list does not recognise was never printed. That is the
+              same -1 that hides the chrome above and below. */}
+          {page ? <PageContent page={page} /> : <NotFound />}
         </div>
 
         {index >= 0 && (

@@ -1,10 +1,13 @@
 import type { Review } from './data/review';
 import { reviews } from './data/reviews';
 
-export type Page = {
-  path: string;
-  label: string;
-};
+// The kind is what lets a page be rendered from the model alone rather than from a
+// matched route — the magazine has to be able to put any page on screen, not just the
+// one the URL points at.
+export type Page =
+  | { path: string; label: string; kind: 'cover' }
+  | { path: string; label: string; kind: 'contents' }
+  | { path: string; label: string; kind: 'review'; slug: string };
 
 export const CONTENTS_PATH = '/contents';
 
@@ -17,17 +20,22 @@ export function reviewPath(slug: string): string {
 // what keeps the numbers it lists honest: they are read back out of this same list.
 export function buildPages(list: Review[]): Page[] {
   return [
-    { path: '/', label: 'Cover' },
-    { path: CONTENTS_PATH, label: 'Contents' },
-    ...list.map((review) => ({ path: reviewPath(review.slug), label: review.movie })),
+    { path: '/', label: 'Cover', kind: 'cover' },
+    { path: CONTENTS_PATH, label: 'Contents', kind: 'contents' },
+    ...list.map((review): Page => ({
+      path: reviewPath(review.slug),
+      label: review.movie,
+      kind: 'review',
+      slug: review.slug,
+    })),
   ];
 }
 
 export const pages: Page[] = buildPages(reviews);
 
-// The layout is a pathless route, so useParams() there cannot see the child's :slug.
-// Matching the pathname against an ordered page list keeps pagination a pure function
-// and gives one signal — a -1 index — for "this is not a page of the issue".
+// This list is the whole URL contract of the issue: the router hands over a pathname and
+// everything else — which page, which spread, whether it is a page at all — is read back
+// out of here. A -1 index is the one signal for "this is not a page of the issue".
 export function findPageIndex(list: Page[], pathname: string): number {
   const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
   return list.findIndex((page) => page.path === normalized);

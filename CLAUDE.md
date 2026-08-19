@@ -35,15 +35,17 @@ A movie-review aggregator that reads like a print magazine: `/` is the cover, `/
 
 ### The magazine
 
-- `src/main.tsx` mounts `<App/>` into `#root` inside `StrictMode`, wrapped in `<BrowserRouter>`. Routes live in `src/App.tsx`. That split is deliberate — it lets browser tests render `<MemoryRouter><App/></MemoryRouter>` and exercise the real route table.
+- `src/main.tsx` mounts `<App/>` into `#root` inside `StrictMode`, wrapped in `<BrowserRouter>`. `src/App.tsx` holds the routing. That split is deliberate — it lets browser tests render `<MemoryRouter><App/></MemoryRouter>` and drive the app by URL.
 - **react-router v8, declarative mode** (`<Routes>`/`<Route>`, not `createBrowserRouter`) — all data is a compile-time glob, so there are no loaders or pending states. Note **`react-router-dom` does not exist in v8**; import everything from `react-router`.
-- `src/components/MagazineLayout.tsx` is the pathless layout route: running head, `<Outlet/>`, `<PageNav/>`, and a `window` keydown effect for Left/Right arrow paging.
-- Every page is one **A4 sheet** (210 × 297 mm, ISO 216) on a `bg-desk` backdrop. The `a4-sheet` utility in `src/index.css` caps the width at physical A4 and then at whichever viewport axis runs out first, so the whole sheet is always on screen; the height comes from `aspect-ratio`, never from the content. That only holds because the `<Outlet/>` sits in a `min-h-0 flex-1 overflow-y-auto` wrapper — a review longer than the page scrolls **inside** the sheet instead of stretching it.
+- `src/App.tsx` is **one route** — `<Route path="*" element={<Magazine/>}/>` — because `src/pages.ts` is the issue's URL contract. A route table would restate that mapping in a second place, and it could never render the pages the URL is *not* pointing at, which is most of what the magazine puts on screen.
+- `src/components/Magazine.tsx` is the whole page: running head, the page itself, `<PageNav/>`, and a `window` keydown effect for Left/Right arrow paging. It renders the page by looking the pathname up in `pages`, never from a matched route.
+- `src/components/PageContent.tsx` dispatches on `Page.kind` (`cover` | `contents` | `review`). It is the only place that turns a model entry into a page component, so any page can be rendered anywhere.
+- Every page is one **A4 sheet** (210 × 297 mm, ISO 216) on a `bg-desk` backdrop. The `a4-sheet` utility in `src/index.css` caps the width at physical A4 and then at whichever viewport axis runs out first, so the whole sheet is always on screen; the height comes from `aspect-ratio`, never from the content. That only holds because the page sits in a `min-h-0 flex-1 overflow-y-auto` wrapper — a review longer than the page scrolls **inside** the sheet instead of stretching it.
 - The sheet is a `@container`, so page type is sized in `cqw` and page margins in `%`. Nothing inside a page may be sized in `vw`/`vh` or in fixed `px`: the composition has to survive the sheet being scaled down to a phone, and the ruler for that is the sheet, not the viewport.
 - `@page { size: A4 portrait }` plus a `print:` pass on the layout means Ctrl-P prints the real thing — a `@media print` palette override at the end of the palette block keeps the paper white when the reader is in dark mode.
-- Pagination is **not** derived from `useParams` — a pathless layout route cannot see its child's `:slug`. Instead `src/pages.ts` builds an ordered `Page[]` and `findPageIndex(pages, pathname)` matches on the pathname. A `-1` index means "not a page of this issue", which is the single signal that hides the running head and pager (used by the 404).
+- Pagination is **not** derived from `useParams`. `src/pages.ts` builds an ordered `Page[]` and `findPageIndex(pages, pathname)` matches on the pathname. A `-1` index means "not a page of this issue" — the single signal that renders the 404 and hides the running head and pager.
 - The contents is a page of the issue like any other, so it paginates and prints for free. It reads its folios back out of `pages` via `findPageNumber`, so a page inserted into `buildPages` renumbers the listing with it rather than leaving it to drift.
-- An unknown slug still matches `reviews/:slug`, so the wildcard route never sees it — `ReviewPage` renders `<NotFound/>` itself.
+- An unknown slug is just a pathname `pages` does not list, so it takes the same `-1` path as any other address outside the issue. `ReviewPage` takes its `slug` as a prop and never touches the router.
 
 ### Review data
 
