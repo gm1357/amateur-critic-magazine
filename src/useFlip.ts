@@ -74,6 +74,13 @@ export function useFlip(
   const gesture = useRef<Gesture | undefined>(undefined);
   const displayedMode = useRef(mode);
 
+  // The spread the URL was last seen pointing at. A drag navigates the moment the reader
+  // lets go, and that navigation lands one commit after the state that starts the settle —
+  // so the effect below runs once with the leaf already flying towards its new spread and
+  // the URL still on the old one. Without this, that stale reading is indistinguishable
+  // from the reader asking for a different page mid-turn.
+  const seenTarget = useRef(target);
+
   // A swipe that begins on a contents entry is still a swipe — most of that page is
   // links, and refusing to turn from them would make it nearly unswipeable. So the link
   // is followed only if the finger never went anywhere.
@@ -97,6 +104,9 @@ export function useFlip(
   // which is the case in the browser tests: the magazine would turn pages forever.
   useEffect(() => {
     if (target === undefined || phase === 'drag') return;
+
+    const moved = target !== seenTarget.current;
+    seenTarget.current = target;
 
     // Changing mode re-cuts the issue into different spreads. Nothing turned; the reader
     // is looking at a differently sized book.
@@ -123,8 +133,11 @@ export function useFlip(
     }
 
     // A second turn asked for while a leaf is still in the air: land the one that is
-    // turning and start the next from where it came down.
-    if (turning && target !== turning.to) {
+    // turning and start the next from where it came down. Only a URL that has actually
+    // moved is the reader asking — this effect also runs whenever the turn's own state
+    // changes, and acting on those would restart the settle a released drag had already
+    // begun, from nothing.
+    if (moved && turning && target !== turning.to) {
       animation.current?.cancel();
       setDisplayed(turning.to);
       setTurning({

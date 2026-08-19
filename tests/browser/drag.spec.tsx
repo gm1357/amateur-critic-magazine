@@ -156,3 +156,62 @@ test('a real pointer drag turns the page as well', async () => {
   await expect.poll(() => book.getAttribute('data-phase')).toBe('rest');
   expect(book.getAttribute('data-spread')).toBe('2');
 });
+
+// A leaf let go of past halfway carries on from where the hand left it. The bug this
+// guards against was the URL arriving a commit after the state that starts the settle,
+// which read as the reader asking for a different page and restarted the turn from flat:
+// the paper snapped back to the desk and turned again, over the full duration.
+test('a released leaf carries on from where it was let go, never from flat', async () => {
+  const screen = await renderAt(CONTENTS_PATH);
+  const book = bookOf(screen.container);
+  const grip = centreOf(zoneOf(screen.container, 'next'));
+  const watch = track(book);
+
+  // Stopped whatever happens: a sampler left running would keep asking the browser for a
+  // frame for the rest of the suite.
+  let angles: number[];
+  try {
+    await drag(grip, { x: grip.x - leafWidth(screen.container) * 0.7, y: grip.y });
+    await expect.poll(() => book.getAttribute('data-phase')).toBe('rest');
+    angles = watch.angles;
+  } finally {
+    watch.stop();
+  }
+
+  // A forward turn only ever goes one way. Anything else is the leaf being put back.
+  expect(angles.at(-1)).toBeCloseTo(-180, 0);
+  for (const [step, angle] of angles.entries()) {
+    if (step > 0) expect(angle).toBeLessThanOrEqual(angles[step - 1] + 0.5);
+  }
+});
+
+// The leaf's angle, read back off the composited matrix rather than off the custom
+// property, because the settle is a Web Animation and does not write that property.
+function angleOf(transform: string): number | undefined {
+  if (!transform.startsWith('matrix3d')) return transform === 'none' ? undefined : 0;
+  const cells = transform.slice(9, -1).split(',').map(Number);
+  return (Math.atan2(-cells[2], cells[0]) * 180) / Math.PI;
+}
+
+function track(book: Element) {
+  const angles: number[] = [];
+  let running = true;
+
+  function sample() {
+    if (!running) return;
+    const leaf = book.querySelector('.leaf-turn');
+    if (leaf) {
+      const angle = angleOf(getComputedStyle(leaf).transform);
+      if (angle !== undefined) angles.push(angle);
+    }
+    requestAnimationFrame(sample);
+  }
+  requestAnimationFrame(sample);
+
+  return {
+    angles,
+    stop: () => {
+      running = false;
+    },
+  };
+}
