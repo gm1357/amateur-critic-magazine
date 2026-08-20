@@ -1,12 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { Sample } from './flip';
 import {
   dragProgress,
+  flickVelocity,
   flipAngle,
   prefersReducedMotion,
   remainingTravel,
   settleTarget,
   swipeIntent,
   swipeThreshold,
+  trail,
   turnDuration,
 } from './flip';
 import type { Direction, Mode } from './spread';
@@ -35,8 +38,8 @@ type Gesture = {
   startX: number;
   startY: number;
   progress: number;
-  lastTime: number;
-  velocity: number;
+  // The recent trail of the gesture, which is what a flick is measured over.
+  samples: Sample[];
 };
 
 export type Flip = {
@@ -214,11 +217,9 @@ export function useFlip(
       }
 
       const progress = dragProgress(held.direction, event.clientX - held.startX, held.leafWidth);
-      const elapsed = event.timeStamp - held.lastTime;
-      if (elapsed > 0) held.velocity = ((progress - held.progress) * 1000) / elapsed;
 
       held.progress = progress;
-      held.lastTime = event.timeStamp;
+      held.samples = trail(held.samples, { progress, time: event.timeStamp });
       angleTo(progress, held.direction);
     }
 
@@ -243,7 +244,7 @@ export function useFlip(
       held.direction = intent;
       held.to = to;
       held.startX = event.clientX;
-      held.lastTime = event.timeStamp;
+      held.samples = [{ progress: 0, time: event.timeStamp }];
       swallowClick.current = true;
 
       setTurning({
@@ -272,7 +273,9 @@ export function useFlip(
       // A cancelled pointer is the browser deciding the gesture was someone else's — a
       // scroll, usually. The leaf falls back rather than turning on the reader.
       const settle =
-        event.type === 'pointercancel' ? 'from' : settleTarget(held.progress, held.velocity);
+        event.type === 'pointercancel'
+          ? 'from'
+          : settleTarget(held.progress, flickVelocity(held.samples));
 
       setTurning({
         from: displayedAt.current,
@@ -341,8 +344,7 @@ export function useFlip(
       startX: event.clientX,
       startY: event.clientY,
       progress: 0,
-      lastTime: event.timeStamp,
-      velocity: 0,
+      samples: [{ progress: 0, time: event.timeStamp }],
     };
 
     setTurning({ from: displayed, to, direction, settle: 'from', progress: 0 });
@@ -367,8 +369,7 @@ export function useFlip(
       startX: event.clientX,
       startY: event.clientY,
       progress: 0,
-      lastTime: event.timeStamp,
-      velocity: 0,
+      samples: [{ progress: 0, time: event.timeStamp }],
     };
   }
 

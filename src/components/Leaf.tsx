@@ -21,8 +21,14 @@ export default function Leaf({ page }: { page: Page }) {
       )}
 
       {/* min-h-0 lets this shrink below its content, which is what moves the overflow of a
-          long review inside the page instead of stretching the paper. */}
-      <div className="leaf-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
+          long review inside the page instead of stretching the paper.
+
+          touch-action belongs here as well as on the leaf, and this is the copy that does
+          the work: a touch resolves its touch-action from what it landed on up to that
+          element's scroll container, and this is the scroll container. Left to `auto`, the
+          browser claims any touch that travels far enough as a scroll — in either
+          direction — and sends `pointercancel`, so every swipe fell back home. */}
+      <div className="leaf-scroll flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto">
         <PageContent page={page} />
       </div>
 

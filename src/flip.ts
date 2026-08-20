@@ -30,10 +30,41 @@ export function turnDuration(reducedMotion: boolean, remaining: number): number 
 }
 
 // A flick: how fast the leaf has to be travelling, in leaf-widths per second, for the
-// release to complete a turn the drag never got halfway through. Set high enough that a
-// short, brisk, deliberate drag is still judged on where it got to — crossing two whole
-// pages a second is a throw, not a drag.
-export const FLICK = 2;
+// release to complete a turn the drag never got halfway through. Half a page a second is
+// brisk for a gesture whose whole job is positioning, and a reader placing a leaf to look
+// at it is slower still.
+export const FLICK = 1.4;
+
+export type Sample = { progress: number; time: number };
+
+// A finger slows as it lifts, so the last pair of frames is the worst available measure of
+// a flick: a page thrown across in a fifth of a second reads as stationary at the moment
+// it is let go. Velocity is taken over a window instead — long enough to survive that
+// deceleration and a dropped frame, short enough that a drag which paused and then moved
+// is judged on the moving.
+export const VELOCITY_WINDOW = 90;
+
+const TRAIL = 8;
+
+export function trail(samples: Sample[], sample: Sample): Sample[] {
+  return [...samples, sample].slice(-TRAIL);
+}
+
+export function flickVelocity(samples: Sample[]): number {
+  const last = samples.at(-1);
+  if (!last) return 0;
+
+  // The samples are in order, so the oldest one still inside the window is the earliest
+  // reading worth drawing a line through. A gesture reported at long intervals may have
+  // only the latest inside it, and is then measured against the reading before, however
+  // old — a number from a stale sample beats no number at all.
+  const recent = samples.filter((sample) => last.time - sample.time <= VELOCITY_WINDOW);
+  const first = recent.length > 1 ? recent[0] : (samples.at(-2) ?? last);
+  const elapsed = last.time - first.time;
+  if (elapsed <= 0) return 0;
+
+  return ((last.progress - first.progress) * 1000) / elapsed;
+}
 
 function clamp(value: number, low: number, high: number): number {
   return Math.min(Math.max(value, low), high);

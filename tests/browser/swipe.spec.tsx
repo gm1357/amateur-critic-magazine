@@ -65,11 +65,19 @@ test('a finger moving down the page scrolls it rather than turning it', async ()
   expect(book.getAttribute('data-spread')).toBe('2');
 });
 
-test('the page body leaves vertical scrolling to the browser', async () => {
+// The scroller is the load-bearing one, and it is the one this suite cannot otherwise
+// reach: a touch resolves its touch-action from what it landed on up to that element's
+// scroll container, so the leaf's `pan-y` never applies to a finger inside the page. Left
+// to `auto`, the browser claims any touch that travels far enough — in either direction —
+// and sends `pointercancel`, which lands every swipe back where it started. Synthetic
+// pointer events are never cancelled that way, so nothing else here would notice.
+test('the page body leaves vertical scrolling to the browser, and only vertical', async () => {
   const screen = await renderAt(reviewPath(reviews[0].slug));
   const leaf = screen.container.querySelector('.a4-leaf')!;
+  const scroller = leaf.querySelector('.leaf-scroll')!;
 
   expect(getComputedStyle(leaf).touchAction).toBe('pan-y');
+  expect(getComputedStyle(scroller).touchAction).toBe('pan-y');
 });
 
 // Most of the contents is links. Refusing to turn from them would leave that page nearly

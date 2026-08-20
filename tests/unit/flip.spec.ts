@@ -2,9 +2,12 @@ import { expect, test } from 'vitest';
 import {
   dragProgress,
   FLICK,
+  flickVelocity,
   flipAngle,
   remainingTravel,
   settleTarget,
+  trail,
+  VELOCITY_WINDOW,
   swipeIntent,
   swipeThreshold,
   TURN_DURATION,
@@ -116,4 +119,79 @@ test('the threshold means the same thing on a phone as on a desk', () => {
   expect(swipeThreshold(1000)).toBe(20);
   // Never so small that a resting thumb counts as a swipe.
   expect(swipeThreshold(100)).toBe(8);
+});
+
+// Half a leaf across a quarter of a second: a flick, and the sort a finger actually makes.
+test('a flick is measured across a window, not across the last frame', () => {
+  let samples = [{ progress: 0, time: 0 }];
+  for (let frame = 1; frame <= 15; frame++) {
+    samples = trail(samples, { progress: frame * 0.04, time: frame * 16 });
+  }
+  // A finger comes to rest against the paper before it lifts. The last pair of frames says
+  // the gesture stopped; the window says it was moving when it mattered.
+  samples = trail(samples, { progress: 0.601, time: 16 * 16 });
+
+  expect(flickVelocity(samples)).toBeGreaterThan(FLICK);
+  expect(settleTarget(0.601, flickVelocity(samples))).toBe('to');
+});
+
+test('a leaf placed slowly is judged on where it was put, not on the way it got there', () => {
+  let samples = [{ progress: 0, time: 0 }];
+  // A fifth of a leaf over a third of a second — a reader positioning the page, not
+  // throwing it.
+  for (let frame = 1; frame <= 20; frame++) {
+    samples = trail(samples, { progress: frame * 0.01, time: frame * 16 });
+  }
+
+  expect(flickVelocity(samples)).toBeLessThan(FLICK);
+  expect(settleTarget(0.2, flickVelocity(samples))).toBe('from');
+});
+
+test('one frame of jitter cannot pass for a flick', () => {
+  const samples = trail(
+    [
+      { progress: 0.2, time: 0 },
+      { progress: 0.2, time: 30 },
+      { progress: 0.2, time: 60 },
+    ],
+    // A single sample that arrived far too fast to be a hand.
+    { progress: 0.24, time: 62 },
+  );
+
+  // Across the last pair that is 20 leaf-widths a second; across the window it is what the
+  // hand was really doing.
+  expect(flickVelocity(samples)).toBeLessThan(FLICK);
+});
+
+test('the trail is bounded and keeps the newest samples', () => {
+  let samples: { progress: number; time: number }[] = [];
+  for (let frame = 0; frame < 40; frame++) {
+    samples = trail(samples, { progress: frame / 40, time: frame * 16 });
+  }
+
+  expect(samples.length).toBeLessThanOrEqual(8);
+  expect(samples.at(-1)).toEqual({ progress: 39 / 40, time: 39 * 16 });
+});
+
+test('a gesture with nothing to measure has no velocity', () => {
+  expect(flickVelocity([])).toBe(0);
+  expect(flickVelocity([{ progress: 0.4, time: 120 }])).toBe(0);
+  // Two readings at the same instant are one reading.
+  expect(
+    flickVelocity([
+      { progress: 0, time: 9 },
+      { progress: 0.4, time: 9 },
+    ]),
+  ).toBe(0);
+});
+
+// A gesture reported at long intervals — a throttled or backgrounded frame — still has to
+// produce a number rather than falling through the window and reading as stationary.
+test('samples all older than the window are still measured', () => {
+  const velocity = flickVelocity([
+    { progress: 0, time: 0 },
+    { progress: 0.5, time: VELOCITY_WINDOW * 3 },
+  ]);
+
+  expect(velocity).toBeCloseTo((0.5 * 1000) / (VELOCITY_WINDOW * 3), 5);
 });
