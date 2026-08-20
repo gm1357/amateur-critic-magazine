@@ -48,6 +48,21 @@ test('the cover is page one, the contents page two, and every review follows', (
   expect(pages.length).toBe(reviews.length + 2);
 });
 
+// Every page carries what it takes to render it, so the magazine can put a page on
+// screen without the router having matched it.
+test('every page knows what kind of page it is', () => {
+  const built = buildPages(reviews);
+
+  expect(built[0].kind).toBe('cover');
+  expect(built[1].kind).toBe('contents');
+
+  const entries = built.slice(2);
+  expect(entries.map((page) => page.kind)).toEqual(reviews.map(() => 'review'));
+  expect(entries.map((page) => (page.kind === 'review' ? page.slug : undefined))).toEqual(
+    reviews.map((review) => review.slug),
+  );
+});
+
 test('findPageIndex maps a pathname to its page', () => {
   expect(findPageIndex(pages, '/')).toBe(0);
   expect(findPageIndex(pages, CONTENTS_PATH)).toBe(1);

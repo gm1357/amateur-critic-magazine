@@ -53,9 +53,17 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* The margin of desk left showing around the sheet. The sheet subtracts it from both
+  /* The margin of desk left showing around the spread. The leaf subtracts it from both
      axes when it sizes itself, so the two can never drift apart. */
   --sheet-gutter: 1rem;
+
+  /* The pager sits on the desk under the spread rather than on the paper, so the paper
+     has to give up this much height for it. PageNav is sized to match. */
+  --desk-chrome: 3.5rem;
+
+  /* How many leaves are open. `magazine-spread` raises it to two once there is desk
+     enough; everything else is measured off one leaf either way. */
+  --leaves: 1;
 }
 
 @page {
@@ -63,24 +71,183 @@
   margin: 0;
 }
 
-/* A page of the issue is a sheet of A4 — 210 x 297 mm, ISO 216. The width is physical A4,
-   then capped by whichever viewport axis runs out first, so the whole sheet is on screen
-   at once and the proportion is identical at every size. Height comes from the ratio
-   rather than from the content: a review that outruns the page scrolls inside it, which
-   is what keeps the paper A4 instead of merely A4-wide. */
-@utility a4-sheet {
-  width: min(
+/* The desk is what knows how much room there is, so the leaf width is measured here and
+   everything standing on it — the spread, the pager, later the flip's perspective — is
+   measured off that one ruler. It is physical A4, then capped by whichever axis runs out
+   first, so the whole book is on screen at once and the proportion is identical at every
+   size. */
+@utility magazine-desk {
+  --leaf-w: min(
     210mm,
-    calc(100vw - var(--sheet-gutter) * 2),
-    calc((100svh - var(--sheet-gutter) * 2) * 210 / 297)
+    calc((100vw - var(--sheet-gutter) * 2) / var(--leaves)),
+    calc((100svh - var(--sheet-gutter) * 2 - var(--desk-chrome)) * 210 / 297)
   );
+
+  &[data-mode='spread'] {
+    --leaves: 2;
+  }
+
+  /* On paper a leaf is the page: it takes its true size and the desk goes away. */
+  @media print {
+    --leaf-w: 210mm;
+    --leaves: 1;
+  }
+}
+
+/* An open magazine — one leaf, or two facing leaves once there is desk enough. */
+@utility magazine-book {
+  position: relative;
+  display: flex;
+  width: calc(var(--leaf-w) * var(--leaves));
+
+  @media print {
+    display: block;
+  }
+}
+
+/* A page of the issue is a sheet of A4 — 210 x 297 mm, ISO 216. The height comes from the
+   ratio rather than from the content: a review that outruns the page scrolls inside it,
+   which is what keeps the paper A4 instead of merely A4-wide. */
+@utility a4-leaf {
+  width: var(--leaf-w);
   aspect-ratio: 210 / 297;
 
-  /* On paper the sheet is the page, so it takes its true size and drops the desk chrome. */
   @media print {
     width: 210mm;
     height: 297mm;
   }
+}
+
+/* The half of a spread with no page on it — the cover has nothing to face, and an even
+   page count leaves a blank recto at the back. It holds the other leaf in place and shows
+   bare desk; on paper it is not a page at all. */
+@utility leaf-blank {
+  width: var(--leaf-w);
+
+  @media print {
+    display: none;
+  }
+}
+
+/* Break between leaves rather than after them, so the last page of the issue does not
+   push a blank sheet out of the printer. */
+@media print {
+  .a4-leaf ~ .a4-leaf {
+    break-before: page;
+  }
+}
+
+/* The leaf in the air. It must never carry `overflow`, `opacity`, `filter` or `contain:
+   paint`: any grouping property forces `preserve-3d` to compute to `flat`, and the turn
+   collapses into a 2D squash. Clipping belongs on the faces, which have no 3D children of
+   their own. */
+/* The edge of the page, where a hand takes hold of it. It sits above the leaf in the air
+   so the reader can catch the next one, and it owns `touch-action: none` so a drag that
+   starts on the edge is never handed to the scroller. */
+@utility turn-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  width: calc(var(--leaf-w) * 0.09);
+  cursor: grab;
+  touch-action: none;
+
+  &[data-turn-zone='next'] {
+    right: 0;
+  }
+
+  &[data-turn-zone='previous'] {
+    left: 0;
+  }
+
+  @media print {
+    display: none;
+  }
+}
+
+[data-phase='drag'] .turn-zone {
+  cursor: grabbing;
+}
+
+@utility leaf-turn {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  width: var(--leaf-w);
+  transform-style: preserve-3d;
+  transform: rotateY(var(--flip-angle, 0deg));
+  will-change: transform;
+
+  /* The right-hand leaf is the right-hand leaf either way. The left-hand one sits at the
+     book's left half when two leaves are open, and just off the desk when one is — which
+     is the same expression, because the book is that much narrower. */
+  &[data-side='right'] {
+    right: 0;
+    transform-origin: left center;
+  }
+
+  &[data-side='left'] {
+    left: calc(var(--leaf-w) * (var(--leaves) - 2));
+    transform-origin: right center;
+  }
+
+  @media print {
+    display: none;
+  }
+}
+
+@utility leaf-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+
+  &[data-face='back'] {
+    transform: rotateY(180deg);
+  }
+}
+
+/* Paper catches the light as it lifts, darkest along the hinge it is turning about. It is
+   static rather than animated because a face is only ever on screen while its leaf is in
+   the air. The hinge is the leaf's left edge turning forward and its right edge turning
+   back, and the back face is a mirror of its own leaf, so each of the four combinations
+   shades the other way from the one beside it. */
+@theme inline {
+  --color-curl: rgb(0 0 0 / 0.18);
+}
+
+.leaf-face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+[data-side='right'] > [data-face='front']::after,
+[data-side='left'] > [data-face='back']::after {
+  background: linear-gradient(to right, var(--color-curl), transparent 42%);
+}
+
+[data-side='left'] > [data-face='front']::after,
+[data-side='right'] > [data-face='back']::after {
+  background: linear-gradient(to left, var(--color-curl), transparent 42%);
+}
+
+/* Perspective exists only while a leaf is actually turning. At rest the paper carries no
+   transform at all, so type rasterises crisply and no browser is asked to composite a
+   scrolling page inside a 3D context. */
+[data-phase='drag'],
+[data-phase='animate'] {
+  perspective: calc(var(--leaf-w) * 2.6);
+  perspective-origin: 50% 45%;
+}
+
+/* Nobody scrolls a page that is in the air. */
+[data-phase='drag'] .leaf-scroll,
+[data-phase='animate'] .leaf-scroll {
+  overflow: hidden;
 }
 
 @utility drop-cap {

@@ -1,16 +1,13 @@
-import { useParams } from 'react-router';
 import { findReview } from '../data/reviews';
 import Dateline from './Dateline';
 import NotFound from './NotFound';
 import ScoreBadge from './ScoreBadge';
 
-export default function ReviewPage() {
-  const { slug } = useParams();
+export default function ReviewPage({ slug }: { slug: string }) {
   const review = findReview(slug);
 
-  // An unknown slug still matches this route, so the wildcard route never sees it —
-  // the 404 has to be rendered from here. The layout hides its chrome on its own,
-  // because findPageIndex does not recognise the pathname.
+  // Every review page in the model is built from a review, so this cannot miss — but the
+  // link between the two is a slug, which the type system cannot check.
   if (!review) return <NotFound />;
 
   const paragraphs = review.text.split(/\n{2,}/);

@@ -24,8 +24,8 @@ afterEach(async () => {
 });
 
 function sheetOf(container: HTMLElement) {
-  const sheet = container.querySelector('.a4-sheet');
-  if (!sheet) throw new Error('no A4 sheet was rendered');
+  const sheet = container.querySelector('.a4-leaf');
+  if (!sheet) throw new Error('no A4 leaf was rendered');
   return sheet;
 }
 
