@@ -8,6 +8,8 @@ import { pages } from '../../src/pages';
 // Expectations are derived from the real `reviews` array so that editing a JSON file
 // does not break tests that are not about that review.
 const review = reviews[1];
+const hearted = reviews.find((entry) => entry.hearted)!;
+const plain = reviews.find((entry) => !entry.hearted)!;
 
 test('a review page shows the movie, score, dateline and body', async () => {
   const screen = await render(
@@ -88,4 +90,38 @@ test('the dateline is human-readable and carries the raw ISO date', async () => 
   const movieDate = new Date(review.date);
 
   await expect.element(dateline).toHaveAttribute('datetime', movieDate.toISOString().split('T')[0]);
+});
+
+test('a hearted review is stamped with a seal in the corner of the page', async () => {
+  const screen = await render(
+    <MemoryRouter initialEntries={[`/reviews/${hearted.slug}`]}>
+      <App />
+    </MemoryRouter>,
+  );
+
+  const seal = screen.getByRole('img', { name: 'Seal of approval' });
+  await expect.element(seal).toBeVisible();
+
+  const heading = screen.getByRole('heading', { level: 1 }).element();
+  expect(heading.contains(seal.element())).toBe(true);
+
+  const margin = heading.getBoundingClientRect();
+  const title = heading.firstElementChild!.getBoundingClientRect();
+  const stamp = seal.element().getBoundingClientRect();
+
+  // Pinned to the outer margin, however short the title is...
+  expect(margin.right - stamp.right).toBeLessThanOrEqual(1);
+  // ...and never set against the name, however long it runs.
+  expect(stamp.left).toBeGreaterThan(title.right);
+});
+
+test('a review that was not hearted carries no seal', async () => {
+  const screen = await render(
+    <MemoryRouter initialEntries={[`/reviews/${plain.slug}`]}>
+      <App />
+    </MemoryRouter>,
+  );
+
+  await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(plain.movie);
+  expect(screen.getByRole('img', { name: 'Seal of approval' }).elements()).toHaveLength(0);
 });

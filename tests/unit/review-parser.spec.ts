@@ -14,8 +14,24 @@ test('parses a valid review and renames review to text', () => {
     movie: 'Heat',
     score: 9,
     date: '2026-01-14',
+    hearted: false,
     text: 'First paragraph.\n\nSecond paragraph.',
   });
+});
+
+// The marker it comes from is present or absent, so a file that never mentions it is a
+// review that was not hearted — not a malformed one.
+test('an absent hearted is not an error, it is false', () => {
+  expect(parseReview(valid, 'heat.json', 'heat').hearted).toBe(false);
+  expect(parseReview({ ...valid, hearted: true }, 'heat.json', 'heat').hearted).toBe(true);
+});
+
+test('a non-boolean hearted names both the file and the field', () => {
+  const data = { ...valid, hearted: 'yes' };
+
+  expect(() => parseReview(data, 'heat.json', 'heat')).toThrow(/heat\.json/);
+  expect(() => parseReview(data, 'heat.json', 'heat')).toThrow(/"hearted"/);
+  expect(() => parseReview(data, 'heat.json', 'heat')).toThrow(/boolean/);
 });
 
 test('a missing movie names both the file and the field', () => {

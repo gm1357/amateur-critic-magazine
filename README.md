@@ -15,12 +15,14 @@ Drop a JSON file into `src/data/reviews/`. **The filename is the URL slug** — 
   "movie": "The Lighthouse",
   "score": 7,
   "date": "2026-03-22",
+  "hearted": true,
   "review": "First paragraph...\n\nSecond paragraph..."
 }
 ```
 
 - `score` is a whole number from 1 to 10 — no fractions. It renders as five stars, one point per half star, so a 7 shows three and a half.
 - `date` is an ISO calendar date, `YYYY-MM-DD`. It sets the review's position in the issue — pages run oldest first.
+- `hearted` marks a favourite. Optional — leave it out and the review is simply not hearted.
 - `review` is the body. Separate paragraphs with a blank line (`\n\n`); the first one gets the drop cap.
 
 That's the whole step. The file is picked up at build time, so there's nothing to register and no index to update. If a field is missing or malformed, the build tests fail with the filename and the field that's wrong.

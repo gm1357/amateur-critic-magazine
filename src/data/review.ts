@@ -3,6 +3,7 @@ export type Review = {
   movie: string;
   score: number;
   date: string;
+  hearted: boolean;
   text: string;
 };
 
@@ -43,6 +44,16 @@ function requireScore(value: unknown, file: string): number {
   return value;
 }
 
+// The marker it comes from is present or absent, never written out as false, so an
+// absent field is a review that was not hearted rather than a malformed one.
+function requireFlag(value: unknown, field: string, file: string): boolean {
+  if (value === undefined) return false;
+  if (typeof value !== 'boolean') {
+    fail(file, `field "${field}" must be a boolean, got ${describe(value)}`);
+  }
+  return value;
+}
+
 function requireDate(value: unknown, file: string): string {
   if (typeof value !== 'string' || !ISO_DATE.test(value)) {
     fail(file, `field "date" must be an ISO date like "2026-03-22", got ${describe(value)}`);
@@ -69,6 +80,7 @@ export function parseReview(data: unknown, file: string, slug: string): Review {
     movie: requireText(raw.movie, 'movie', file),
     score: requireScore(raw.score, file),
     date: requireDate(raw.date, file),
+    hearted: requireFlag(raw.hearted, 'hearted', file),
     text: requireText(raw.review, 'review', file),
   };
 }
