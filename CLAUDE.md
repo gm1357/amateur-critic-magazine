@@ -67,7 +67,8 @@ A movie-review aggregator that reads like a print magazine: `/` is the cover, `/
 
 ### Review data
 
-- Reviews are JSON files in `src/data/reviews/<slug>.json` with `movie`, `score`, `date` (ISO `YYYY-MM-DD`), and `review`. **The filename is the slug.**
+- Reviews are JSON files in `src/data/reviews/<slug>.json` with `movie`, `score`, `date` (ISO `YYYY-MM-DD`), `review`, and an optional `hearted`. **The filename is the slug.**
+- `hearted` is a boolean, and the one optional field: it comes from a marker that is present or absent, so an absent field means "not hearted" rather than a malformed review. `parseReview` normalises it to `false`.
 - `score` is a **whole number from 1 to 10**, rendered by `ScoreBadge` as five stars at one point per half star. The half star is a clip, not a glyph: two identical star rows are stacked and the filled one is clipped to `score * 10`% of the width, so the cut always lands on a glyph edge or its exact midpoint. The badge carries `role="img"` with an `aria-label` of `"<score> out of 10"` — that label is what tests locate it by.
 - `src/data/reviews.ts` picks them up with `import.meta.glob({ eager: true })` and sorts by `date` ascending, tie-broken by slug (glob key order is not stable across platforms).
 - `src/data/review.ts` hand-rolls validation and throws naming the offending file and field. Date checking is two-step — an ISO shape test plus a `Date` round-trip — because `new Date('2026-02-31')` silently rolls over rather than failing.

@@ -32,7 +32,7 @@ test('reading one leaf at a time, a spread is a page', () => {
 });
 
 test('the cover is alone on the right and the pages pair up behind it', () => {
-  expect(pages.map((_, index) => spreadOf('spread', index))).toEqual([0, 1, 1, 2, 2, 3]);
+  expect(issueOf(6).map((_, index) => spreadOf('spread', index))).toEqual([0, 1, 1, 2, 2, 3]);
 
   expect(spreadAt('spread', pages, 0)).toEqual({ left: undefined, right: pages[0] });
   expect(spreadAt('spread', pages, 1)).toEqual({ left: pages[1], right: pages[2] });
@@ -91,8 +91,11 @@ test('every page of the issue is on exactly one spread, in exactly one slot', ()
 test('the pager reports two facing pages as the range they are', () => {
   expect(spreadFolio(pages, spreadAt('spread', pages, 0))).toBe('1');
   expect(spreadFolio(pages, spreadAt('spread', pages, 1))).toBe('2–3');
-  expect(spreadFolio(pages, spreadAt('spread', pages, 3))).toBe('6');
   expect(spreadFolio(pages, spreadAt('single', pages, 1))).toBe('2');
+
+  // A leaf whose recto the issue ran out before prints the one folio it has, not a range.
+  const even = issueOf(6);
+  expect(spreadFolio(even, spreadAt('spread', even, 3))).toBe('6');
 });
 
 // The one property the animation rests on: the turn is arranged so that its four slots
