@@ -4,7 +4,8 @@ import { page, userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH, pages, reviewPath } from '../../src/pages';
+import { CONTENTS_PATH, findPageIndex, pages, reviewPath } from '../../src/pages';
+import { spreadOf } from '../../src/spread';
 
 const DESK = { width: 1280, height: 800 };
 const viewport = { width: window.innerWidth, height: window.innerHeight };
@@ -115,6 +116,9 @@ test('a contents entry several pages ahead is still one turn', async () => {
   const screen = await renderAt(CONTENTS_PATH);
   const book = bookOf(screen.container);
   const last = reviews[reviews.length - 1];
+  // Read off the model rather than written down: the jump is however far the back of the
+  // issue happens to be from the contents, which every review committed since changes.
+  const destination = String(spreadOf('spread', findPageIndex(pages, reviewPath(last.slug))));
 
   await screen.getByRole('link', { name: last.movie }).click();
 
@@ -124,11 +128,11 @@ test('a contents entry several pages ahead is still one turn', async () => {
       seen.add(book.getAttribute('data-spread')!);
       return book.getAttribute('data-spread');
     })
-    .toBe('3');
+    .toBe(destination);
 
-  // One turn, not three: the issue was on the spread it left, and then on the spread it
-  // arrived at, never on the two in between.
-  expect([...seen].sort()).toEqual(['1', '3']);
+  // One turn, not several: the issue was on the spread it left, and then on the spread it
+  // arrived at, never on any of the ones in between.
+  expect([...seen].sort()).toEqual(['1', destination].sort());
 });
 
 test('paging to the end and back again leaves the issue where it started', async () => {
