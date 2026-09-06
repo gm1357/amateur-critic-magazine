@@ -2,19 +2,32 @@ import { expect, test } from 'vitest';
 import { findReview, reviews, topReviews } from '../../src/data/reviews';
 import type { Review } from '../../src/data/review';
 import {
+  type Article,
   BACK_PATH,
+  buildArticles,
   buildPages,
   CONTENTS_PATH,
   findPageIndex,
   findPageNumber,
+  nearestPage,
   pages,
+  reviewPath,
 } from '../../src/pages';
 import { anchorOf, spreadAt, spreadOf } from '../../src/spread';
 
-// buildPages only reads slug and movie off a review, so a fake one only needs to look
+// buildArticles only reads slug and movie off a review, so a fake one only needs to look
 // like one — the rest of the fields are irrelevant to pagination.
 function reviewOf(slug: string): Review {
   return { slug, movie: slug, score: 5, date: '2026-01-01', hearted: false, text: 'Body.' };
+}
+
+// The issue as it comes off a composing room that found everything fits on one leaf.
+function singles(list: Review[]) {
+  return buildPages(buildArticles(list), () => 1);
+}
+
+function kindsOf(list: { article: Article }[]): string[] {
+  return list.map((page) => page.article.kind);
 }
 
 // Importing `reviews` evaluates the glob, which runs the parser over every committed
@@ -91,7 +104,7 @@ test('findReview looks up by slug and misses cleanly', () => {
 });
 
 test('the cover is page one, the contents page two, and every review follows', () => {
-  const built = buildPages(reviews);
+  const built = singles(reviews);
   const body = built.slice(2, 2 + reviews.length);
 
   expect(built[0].path).toBe('/');
@@ -102,15 +115,58 @@ test('the cover is page one, the contents page two, and every review follows', (
 // Every page carries what it takes to render it, so the magazine can put a page on
 // screen without the router having matched it.
 test('every page knows what kind of page it is', () => {
-  const built = buildPages(reviews);
+  const built = singles(reviews);
   const body = built.slice(2, 2 + reviews.length);
 
-  expect(built[0].kind).toBe('cover');
-  expect(built[1].kind).toBe('contents');
-  expect(body.map((page) => page.kind)).toEqual(reviews.map(() => 'review'));
-  expect(body.map((page) => (page.kind === 'review' ? page.slug : undefined))).toEqual(
-    reviews.map((review) => review.slug),
-  );
+  expect(built[0].article.kind).toBe('cover');
+  expect(built[1].article.kind).toBe('contents');
+  expect(kindsOf(body)).toEqual(reviews.map(() => 'review'));
+  expect(
+    body.map((page) => (page.article.kind === 'review' ? page.article.slug : undefined)),
+  ).toEqual(reviews.map((review) => review.slug));
+});
+
+// An article that outruns its leaf is continued on the next one, and the pages it is
+// continued onto are pages of the issue like any other: they are printed, numbered, and
+// addressed by a URL.
+test('an article that runs over becomes as many pages as it takes', () => {
+  const list = buildArticles([reviewOf('one'), reviewOf('two')]);
+  const built = buildPages(list, (article) => (article.path === reviewPath('one') ? 3 : 1));
+
+  const continued = built.filter((page) => page.article.path === reviewPath('one'));
+  expect(continued.map((page) => page.path)).toEqual([
+    '/reviews/one',
+    '/reviews/one/2',
+    '/reviews/one/3',
+  ]);
+  expect(continued.map((page) => page.part)).toEqual([0, 1, 2]);
+  expect(continued.every((page) => page.parts === 3)).toBe(true);
+
+  // A review that grew a page pushes everything printed after it along.
+  expect(findPageNumber(built, reviewPath('one'))).toBe(3);
+  expect(findPageNumber(built, reviewPath('two'))).toBe(6);
+});
+
+// The first page of an article keeps the article's own URL, so a link into the issue is a
+// link to where the piece starts rather than to a page number that moves.
+test('the first page of an article is the article', () => {
+  const built = buildPages(buildArticles([reviewOf('one')]), () => 4);
+
+  expect(built[0].path).toBe('/');
+  expect(findPageIndex(built, CONTENTS_PATH)).toBe(1);
+  expect(findPageIndex(built, `${CONTENTS_PATH}/4`)).toBe(4);
+  expect(findPageIndex(built, `${CONTENTS_PATH}/5`)).toBe(-1);
+});
+
+// Re-typesetting can shorten an article, and a reader standing on a page it no longer has
+// is not on a missing page — they are on the same article, nearer its end.
+test('a page a shortened article no longer has falls back to its last', () => {
+  const built = buildPages(buildArticles([reviewOf('one')]), () => 2);
+
+  expect(nearestPage(built, '/reviews/one/2')?.path).toBe('/reviews/one/2');
+  expect(nearestPage(built, '/reviews/one/9')?.path).toBe('/reviews/one/2');
+  expect(nearestPage(built, '/reviews/nobody/2')).toBeUndefined();
+  expect(nearestPage(built, '/reviews/one')).toBeUndefined();
 });
 
 // The back cover mirrors the front: alone on its own leaf, with nothing to face. The
@@ -129,24 +185,24 @@ test('the back cover is always the last page, and it is always alone', () => {
   }
 });
 
-// The parity of cover + contents + reviews decides whether a blank leaf is needed to
-// keep the back cover isolated: an odd count of reviews behind it needs one, an even
-// count already leaves the back cover with nothing to pair against.
-test('a blank leaf appears only when the reviews alone would pair with the back cover', () => {
-  const odd = buildPages([reviewOf('one')]);
-  const even = buildPages([reviewOf('one'), reviewOf('two')]);
+// The parity of everything printed ahead of it decides whether a blank leaf is needed to
+// keep the back cover isolated — and it is a parity of *leaves*, so an article that ran
+// over is what decides it just as much as one that was added.
+test('a blank leaf appears only when the pages ahead would pair with the back cover', () => {
+  const odd = singles([reviewOf('one')]);
+  const even = singles([reviewOf('one'), reviewOf('two')]);
 
-  expect(odd.map((page) => page.kind)).toEqual(['cover', 'contents', 'review', 'back']);
-  expect(even.map((page) => page.kind)).toEqual([
-    'cover',
-    'contents',
-    'review',
-    'review',
-    'blank',
-    'back',
-  ]);
+  // The same odd issue again, with the one review continued onto a second leaf: the extra
+  // page flips the parity, so this time the blank is the one that is not needed.
+  const continued = buildPages(buildArticles([reviewOf('one')]), (article) =>
+    article.path === reviewPath('one') ? 2 : 1,
+  );
 
-  for (const built of [odd, even]) {
+  expect(kindsOf(odd)).toEqual(['cover', 'contents', 'review', 'back']);
+  expect(kindsOf(even)).toEqual(['cover', 'contents', 'review', 'review', 'blank', 'back']);
+  expect(kindsOf(continued)).toEqual(['cover', 'contents', 'review', 'review', 'blank', 'back']);
+
+  for (const built of [odd, even, continued]) {
     const back = findPageIndex(built, BACK_PATH);
     expect(spreadAt('spread', built, spreadOf('spread', back)).right).toBeUndefined();
   }

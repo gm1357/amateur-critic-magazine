@@ -4,7 +4,8 @@ import { page } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { BACK_PATH, CONTENTS_PATH, pages, reviewPath } from '../../src/pages';
+import { BACK_PATH, CONTENTS_PATH } from '../../src/pages';
+import { folioOf, openAt } from './issue';
 
 const A4 = 210 / 297;
 
@@ -27,7 +28,7 @@ function renderAt(path: string) {
 }
 
 function leavesOf(container: HTMLElement) {
-  return [...container.querySelectorAll('.a4-leaf')];
+  return [...container.querySelectorAll('[data-spread] .a4-leaf')];
 }
 
 test('a wide desk opens the issue as two facing pages', async () => {
@@ -35,12 +36,28 @@ test('a wide desk opens the issue as two facing pages', async () => {
   const screen = await renderAt(CONTENTS_PATH);
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Contents' })).toBeVisible();
 
-  const leaves = leavesOf(screen.container);
+  // Two leaves, the addressed one on the left and whatever the issue prints next facing
+  // it — which for a listing longer than a leaf is the rest of the listing.
+  const open = openAt(screen.container);
 
-  expect(leaves.map((leaf) => leaf.getAttribute('data-page'))).toEqual([
-    CONTENTS_PATH,
-    reviewPath(reviews[0].slug),
-  ]);
+  expect(open).toHaveLength(2);
+  expect(open[0]).toBe(CONTENTS_PATH);
+  expect(folioOf(screen.container)).toBe('2–3');
+});
+
+// Two windows onto one article are one article: the copy on the recto is kept out of the
+// accessibility tree, or every entry of a continued listing would be read out twice.
+test('an article continued across a spread is only read out once', async () => {
+  await page.viewport(DESK.width, DESK.height);
+  const screen = await renderAt(CONTENTS_PATH);
+  await expect.element(screen.getByRole('heading', { level: 1, name: 'Contents' })).toBeVisible();
+
+  const [verso, recto] = leavesOf(screen.container);
+  expect(recto.getAttribute('data-page')?.startsWith(CONTENTS_PATH)).toBe(true);
+
+  expect(verso.querySelector('.page-box')?.getAttribute('aria-hidden')).toBeNull();
+  expect(recto.querySelector('.page-box')?.getAttribute('aria-hidden')).toBe('true');
+  expect(screen.getByRole('link', { name: reviews[0].movie }).elements()).toHaveLength(1);
 });
 
 test('both leaves are A4 and the whole spread is on screen', async () => {
@@ -107,7 +124,7 @@ test('the pager counts spreads but still prints page numbers', async () => {
   await page.viewport(DESK.width, DESK.height);
   const screen = await renderAt(CONTENTS_PATH);
 
-  await expect.element(screen.getByText(`2–3 / ${pages.length}`)).toBeVisible();
+  await expect.poll(() => folioOf(screen.container)).toBe('2–3');
 });
 
 // Two facing pages are one leaf, so a step past them is one turn — not two.
@@ -116,29 +133,27 @@ test('paging forward on a wide desk moves a whole leaf', async () => {
   const screen = await renderAt(CONTENTS_PATH);
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Contents' })).toBeVisible();
 
+  const open = openAt(screen.container);
   await screen.getByRole('link', { name: 'Next' }).click();
 
-  // The leaf has to come down before the halves under it are the new spread. Spread two
-  // is where it lands: reviews two and three, past both pages that were already open.
+  // The leaf has to come down before the halves under it are the new spread.
   const book = screen.container.querySelector('[data-spread]')!;
   await expect.poll(() => book.getAttribute('data-spread')).toBe('2');
 
-  const leaves = leavesOf(screen.container);
-  expect(leaves.map((leaf) => leaf.getAttribute('data-page'))).toEqual([
-    reviewPath(reviews[1].slug),
-    reviewPath(reviews[2].slug),
-  ]);
-  await expect.element(screen.getByText(`4–5 / ${pages.length}`)).toBeVisible();
+  // Two new pages, neither of them one that was already open, and the folio moved on by
+  // the two leaves that were turned past.
+  const landed = openAt(screen.container);
+  expect(landed).toHaveLength(2);
+  expect(landed.some((path) => open.includes(path))).toBe(false);
+  expect(folioOf(screen.container)).toBe('4–5');
 });
 
 test('a phone reads the issue one leaf at a time', async () => {
   const screen = await renderAt(CONTENTS_PATH);
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Contents' })).toBeVisible();
 
-  const leaves = leavesOf(screen.container);
-  expect(leaves).toHaveLength(1);
-  expect(leaves[0].getAttribute('data-page')).toBe(CONTENTS_PATH);
-  await expect.element(screen.getByText(`2 / ${pages.length}`)).toBeVisible();
+  expect(openAt(screen.container)).toEqual([CONTENTS_PATH]);
+  expect(folioOf(screen.container)).toBe('2');
 });
 
 // Page type is measured in cqw against the leaf. If the container had stayed on the whole

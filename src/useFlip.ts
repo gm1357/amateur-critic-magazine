@@ -64,6 +64,9 @@ export function useFlip(
   pageIndex: number,
   spreads: number,
   onTurn: (spread: number) => void,
+  // How the issue is currently cut into pages — the mode it is read in, and the typesetting
+  // it was counted into. See the guard below.
+  edition: string,
 ): Flip {
   const target = pageIndex < 0 ? undefined : spreadOf(mode, pageIndex);
 
@@ -75,7 +78,8 @@ export function useFlip(
   const turnRef = useRef<HTMLDivElement | null>(null);
   const animation = useRef<Animation | undefined>(undefined);
   const gesture = useRef<Gesture | undefined>(undefined);
-  const displayedMode = useRef(mode);
+  const cut = `${mode}:${edition}`;
+  const displayedCut = useRef(cut);
 
   // The spread the URL was last seen pointing at. A drag navigates the moment the reader
   // lets go, and that navigation lands one commit after the state that starts the settle —
@@ -111,10 +115,13 @@ export function useFlip(
     const moved = target !== seenTarget.current;
     seenTarget.current = target;
 
-    // Changing mode re-cuts the issue into different spreads. Nothing turned; the reader
-    // is looking at a differently sized book.
-    if (displayedMode.current !== mode) {
-      displayedMode.current = mode;
+    // Re-cutting the issue moves the reader's page to a different number without their
+    // having turned anything: a change of mode pairs the leaves up differently, and a
+    // re-typesetting gives an article that ran over the pages it needs. Either way nothing
+    // turned — the same page is simply somewhere else in the book — so the leaf is moved
+    // rather than flown.
+    if (displayedCut.current !== cut) {
+      displayedCut.current = cut;
       animation.current?.cancel();
       setDisplayed(target);
       setPhase('rest');
@@ -151,7 +158,7 @@ export function useFlip(
         progress: 0,
       });
     }
-  }, [target, displayed, phase, mode, turning]);
+  }, [target, displayed, phase, cut, turning]);
 
   // A layout effect, so the leaf's first painted frame is the one it was already at —
   // which for a fresh turn is 0 degrees, arranged to be indistinguishable from the spread

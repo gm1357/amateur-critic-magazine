@@ -3,7 +3,8 @@ import { expect, test } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH, findPageNumber, pages, reviewPath } from '../../src/pages';
+import { CONTENTS_PATH } from '../../src/pages';
+import { folioOf, totalOf } from './issue';
 
 function renderContents() {
   return render(
@@ -56,35 +57,66 @@ test('the contents does not give the scores away', async () => {
   }
 });
 
-test('the folio beside each title is the page the review is actually on', async () => {
+// The folios climb with the listing, and every one of them is a page this issue has. What
+// they cannot be is written down here: an article that ran over moved everything printed
+// after it, which is exactly the thing this has to keep honest.
+test('the folios beside the titles run in order and stay inside the issue', async () => {
   const screen = await renderContents();
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toBeVisible();
   const entries = screen.getByRole('listitem').elements();
+  const total = totalOf(screen.container);
 
-  // The first review is page three: the cover, then this page, then the reviews.
-  for (let index = 0; index < entries.length; index++) {
-    const folio = entries[index].querySelector('span.tabular-nums');
-    expect(folio?.textContent?.trim()).toBe(String(index + 3));
+  const folios = entries.map((entry) =>
+    Number(entry.querySelector('span.tabular-nums')?.textContent?.trim()),
+  );
+
+  expect(folios).toHaveLength(reviews.length);
+  for (const [index, folio] of folios.entries()) {
+    // Past the cover and this listing, inside the back cover, and never behind the review
+    // before it.
+    expect(folio).toBeGreaterThan(2);
+    expect(folio).toBeLessThan(total);
+    if (index > 0) expect(folio).toBeGreaterThan(folios[index - 1]);
   }
 });
 
-test('following an entry opens that review', async () => {
+// The listing is a promise about where a review is. Following it has to land on that page,
+// or the numbers printed beside the titles are decoration.
+test('following an entry opens that review, on the page the listing gave it', async () => {
   const screen = await renderContents();
   const review = reviews[reviews.length - 1];
 
+  const entry = screen
+    .getByRole('listitem')
+    .elements()
+    .find((item) => item.textContent?.includes(review.movie))!;
+  const listed = entry.querySelector('span.tabular-nums')?.textContent?.trim();
+
   await screen.getByRole('link', { name: review.movie }).click();
 
-  const folio = findPageNumber(pages, reviewPath(review.slug));
-
   await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(review.movie);
-  await expect.element(screen.getByText(`${folio} / ${pages.length}`)).toBeVisible();
+  await expect.poll(() => folioOf(screen.container)).toBe(listed);
 });
 
 test('the contents is page two and carries the magazine chrome', async () => {
   const screen = await renderContents();
 
-  await expect.element(screen.getByText(`2 / ${pages.length}`)).toBeVisible();
+  await expect.poll(() => folioOf(screen.container)).toBe('2');
   await expect.element(screen.getByRole('link', { name: 'Previous' })).toBeVisible();
   await expect.element(screen.getByRole('link', { name: 'Next' })).toBeVisible();
+});
+
+// A listing longer than a page is continued on the next one, the way any article is.
+test('a contents too long for one leaf runs on to the next', async () => {
+  const screen = await renderContents();
+  await expect.element(screen.getByRole('heading', { level: 1 })).toBeVisible();
+
+  const listing = screen.container.querySelector(`[data-page="${CONTENTS_PATH}"] .page-flow`)!;
+  const window_ = listing.parentElement!;
+
+  // The listing is wider than the window it is read through: the rest of it is on other
+  // leaves, not behind a scrollbar.
+  expect(listing.scrollWidth).toBeGreaterThan(window_.clientWidth);
+  expect(window_.scrollHeight).toBe(window_.clientHeight);
 });

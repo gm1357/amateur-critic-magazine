@@ -1,6 +1,13 @@
 import { expect, test } from 'vitest';
 import { reviews } from '../../src/data/reviews';
-import { buildPages, findPageIndex, type Page, pages } from '../../src/pages';
+import {
+  type Article,
+  buildArticles,
+  buildPages,
+  findPageIndex,
+  type Page,
+  pages,
+} from '../../src/pages';
 import {
   anchorOf,
   type Mode,
@@ -14,14 +21,18 @@ import {
 const MODES: Mode[] = ['single', 'spread'];
 
 // A page list of a given length, so the counting tests do not depend on how many reviews
-// happen to be committed.
+// happen to be committed, or on how much paper each of them takes.
 function issueOf(length: number): Page[] {
-  return Array.from({ length }, (_, index) => ({
-    path: `/page-${index}`,
-    label: `Page ${index}`,
-    kind: 'review' as const,
-    slug: `page-${index}`,
-  }));
+  return Array.from({ length }, (_, index) => {
+    const article: Article = {
+      path: `/page-${index}`,
+      label: `Page ${index}`,
+      kind: 'review',
+      slug: `page-${index}`,
+    };
+
+    return { path: article.path, label: article.label, article, part: 0, parts: 1 };
+  });
 }
 
 test('reading one leaf at a time, a spread is a page', () => {
@@ -154,8 +165,16 @@ test('one leaf at a time, a turn has no facing page and turns onto a blank verso
   expect(turn.staticRight).toBe(pages[1]);
 });
 
-test('the model does not care how many reviews are committed', () => {
-  const built = buildPages(reviews);
+// Neither how many reviews are committed, nor how much paper the composing room decides
+// each of them takes.
+test('the model does not care how long the issue turns out to be', () => {
+  for (const parts of [
+    () => 1,
+    () => 2,
+    (article: Article) => (article.kind === 'review' ? 3 : 1),
+  ]) {
+    const built = buildPages(buildArticles(reviews), parts);
 
-  expect(spreadCount('spread', built)).toBe(Math.ceil((built.length - 1) / 2) + 1);
+    expect(spreadCount('spread', built)).toBe(Math.ceil((built.length - 1) / 2) + 1);
+  }
 });

@@ -4,7 +4,8 @@ import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews, topReviews } from '../../src/data/reviews';
 import { AUTHOR, ISSUE, MAGAZINE_TITLE, STRAPLINE } from '../../src/magazine';
-import { BACK_PATH, pages } from '../../src/pages';
+import { BACK_PATH } from '../../src/pages';
+import { folioOf, totalOf } from './issue';
 
 const HIGHLIGHTS = 3;
 
@@ -86,6 +87,6 @@ test('nothing on the back cover is a link', async () => {
 test('the back cover is the last page of the issue', async () => {
   const screen = await renderBackCover();
 
-  await expect.element(screen.getByText(`${pages.length} / ${pages.length}`)).toBeVisible();
+  await expect.poll(() => folioOf(screen.container)).toBe(String(totalOf(screen.container)));
   expect(screen.getByRole('link', { name: 'Next' }).elements()).toHaveLength(0);
 });

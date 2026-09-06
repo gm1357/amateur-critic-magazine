@@ -1,5 +1,6 @@
+import { useIssue } from '../issue';
 import { MAGAZINE_TITLE } from '../magazine';
-import { findPageNumber, type Page, pages } from '../pages';
+import { findPageNumber, type Page } from '../pages';
 import PageContent from './PageContent';
 
 // Each leaf is its own sheet of paper — its own border, its own shadow, its own running
@@ -10,11 +11,22 @@ export const LEAF =
 
 // The cover and back cover are their own masthead, and a blank leaf has nothing to run a
 // head or folio over — the chrome is for the pages of the issue proper.
-const CHROME_KINDS = new Set<Page['kind']>(['contents', 'review']);
+const CHROME_KINDS = new Set<Page['article']['kind']>(['contents', 'review']);
 
-export default function Leaf({ page }: { page: Page }) {
+type LeafProps = {
+  // Given only in the composing room, where this leaf is being laid out to be counted
+  // rather than to be read.
+  onParts?: (parts: number) => void;
+  page: Page;
+  // This page is a second window onto an article already open beside it, so its copy of
+  // the text is kept out of the accessibility tree.
+  silent?: boolean;
+};
+
+export default function Leaf({ onParts, page, silent }: LeafProps) {
+  const pages = useIssue();
   const folio = findPageNumber(pages, page.path);
-  const chrome = CHROME_KINDS.has(page.kind);
+  const chrome = CHROME_KINDS.has(page.article.kind);
 
   return (
     <div className={LEAF} data-page={page.path}>
@@ -24,16 +36,15 @@ export default function Leaf({ page }: { page: Page }) {
         </header>
       )}
 
-      {/* min-h-0 lets this shrink below its content, which is what moves the overflow of a
-          long review inside the page instead of stretching the paper.
+      {/* min-h-0 lets this shrink below its content, which is what hands the overflow of a
+          long review to the next leaf instead of stretching the paper. Nothing scrolls: a
+          page that ran long used to grow a scrollbar, and a printed page cannot.
 
-          touch-action belongs here as well as on the leaf, and this is the copy that does
-          the work: a touch resolves its touch-action from what it landed on up to that
-          element's scroll container, and this is the scroll container. Left to `auto`, the
-          browser claims any touch that travels far enough as a scroll — in either
-          direction — and sends `pointercancel`, so every swipe fell back home. */}
-      <div className="leaf-scroll flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto">
-        <PageContent page={page} />
+          touch-action belongs here as well as on the leaf. Left to `auto`, the browser
+          claims any touch that travels far enough as a scroll — in either direction — and
+          sends `pointercancel`, so every swipe fell back home. */}
+      <div className="leaf-page flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden">
+        <PageContent onParts={onParts} page={page} silent={silent} />
       </div>
 
       {chrome && (

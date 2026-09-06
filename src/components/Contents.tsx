@@ -1,22 +1,31 @@
 import { Link } from 'react-router';
 import { reviews } from '../data/reviews';
+import { useIssue } from '../issue';
 import { ISSUE } from '../magazine';
-import { findPageNumber, pages, reviewPath } from '../pages';
+import { findPageNumber, reviewPath } from '../pages';
 import Dateline from './Dateline';
 
+// Block flow, not flex: this is poured into the page's columns, and a flex container is
+// not something a browser will reliably break across one. Each entry is kept whole for the
+// same reason a printer would keep it whole.
 export default function Contents() {
+  const pages = useIssue();
+
   return (
-    <section className="flex flex-1 flex-col px-[9%] py-[6%] text-[clamp(0.8125rem,2cqw,1rem)]">
-      <header className="flex flex-col gap-[1.5cqw] border-b border-rule pb-[3%]">
+    <section className="text-[clamp(0.8125rem,2cqw,1rem)]">
+      <header className="mb-[4%] break-inside-avoid border-b border-rule pb-[3%]">
         <p className="text-[0.7em] tracking-[0.24em] text-accent uppercase">{ISSUE}</p>
-        <h1 className="font-heading text-[clamp(1.5rem,6cqw,3rem)] tracking-tight text-ink">
+        <h1 className="mt-[1.5cqw] font-heading text-[clamp(1.5rem,6cqw,3rem)] tracking-tight text-ink">
           Contents
         </h1>
       </header>
 
-      <ol className="mt-[4%] flex flex-col">
+      <ol>
         {reviews.map((review) => (
-          <li className="border-b border-rule py-[2.6%] last:border-b-0" key={review.slug}>
+          <li
+            className="break-inside-avoid border-b border-rule py-[2.6%] last:border-b-0"
+            key={review.slug}
+          >
             {/* Only the title is the link, so the entry's accessible name is the title —
                 the folio and the leader dots would otherwise be read out as part of it. */}
             <div className="flex items-baseline gap-[1.5cqw]">
