@@ -4,7 +4,7 @@ import { page, userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH, findPageIndex, pages, reviewPath } from '../../src/pages';
+import { BACK_PATH, CONTENTS_PATH, findPageIndex, pages, reviewPath } from '../../src/pages';
 import { spreadOf } from '../../src/spread';
 
 const DESK = { width: 1280, height: 800 };
@@ -149,7 +149,7 @@ test('paging to the end and back again leaves the issue where it started', async
 });
 
 test('the last page has nothing to turn onto', async () => {
-  const screen = await renderAt(reviewPath(reviews[reviews.length - 1].slug));
+  const screen = await renderAt(BACK_PATH);
   const book = bookOf(screen.container);
   const spread = book.getAttribute('data-spread');
 

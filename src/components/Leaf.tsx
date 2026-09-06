@@ -8,13 +8,17 @@ import PageContent from './PageContent';
 export const LEAF =
   'a4-leaf @container flex touch-pan-y flex-col overflow-hidden border border-rule bg-paper font-sans text-muted shadow-lg print:border-0 print:shadow-none';
 
+// The cover and back cover are their own masthead, and a blank leaf has nothing to run a
+// head or folio over — the chrome is for the pages of the issue proper.
+const CHROME_KINDS = new Set<Page['kind']>(['contents', 'review']);
+
 export default function Leaf({ page }: { page: Page }) {
   const folio = findPageNumber(pages, page.path);
+  const chrome = CHROME_KINDS.has(page.kind);
 
   return (
     <div className={LEAF} data-page={page.path}>
-      {/* The cover is its own masthead, so the chrome starts on page two. */}
-      {folio > 1 && (
+      {chrome && (
         <header className="border-b border-rule py-3 text-center text-xs tracking-[0.3em] text-muted uppercase">
           {MAGAZINE_TITLE}
         </header>
@@ -32,7 +36,7 @@ export default function Leaf({ page }: { page: Page }) {
         <PageContent page={page} />
       </div>
 
-      {folio > 1 && (
+      {chrome && (
         <p className="mt-auto pb-[3%] text-center text-xs tabular-nums text-muted">{folio}</p>
       )}
     </div>

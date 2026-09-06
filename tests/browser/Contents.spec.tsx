@@ -3,7 +3,7 @@ import { expect, test } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH, pages } from '../../src/pages';
+import { CONTENTS_PATH, findPageNumber, pages, reviewPath } from '../../src/pages';
 
 function renderContents() {
   return render(
@@ -75,8 +75,10 @@ test('following an entry opens that review', async () => {
 
   await screen.getByRole('link', { name: review.movie }).click();
 
+  const folio = findPageNumber(pages, reviewPath(review.slug));
+
   await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(review.movie);
-  await expect.element(screen.getByText(`${pages.length} / ${pages.length}`)).toBeVisible();
+  await expect.element(screen.getByText(`${folio} / ${pages.length}`)).toBeVisible();
 });
 
 test('the contents is page two and carries the magazine chrome', async () => {

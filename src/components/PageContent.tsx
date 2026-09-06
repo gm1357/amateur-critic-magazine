@@ -1,4 +1,6 @@
 import type { Page } from '../pages';
+import BackCover from './BackCover';
+import BlankPage from './BlankPage';
 import Contents from './Contents';
 import Cover from './Cover';
 import ReviewPage from './ReviewPage';
@@ -14,5 +16,9 @@ export default function PageContent({ page }: { page: Page }) {
       return <Contents />;
     case 'review':
       return <ReviewPage slug={page.slug} />;
+    case 'blank':
+      return <BlankPage />;
+    case 'back':
+      return <BackCover />;
   }
 }

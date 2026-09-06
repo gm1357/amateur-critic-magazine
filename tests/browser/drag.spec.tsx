@@ -4,7 +4,7 @@ import { page, userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH, pages, reviewPath } from '../../src/pages';
+import { BACK_PATH, CONTENTS_PATH, pages, reviewPath } from '../../src/pages';
 import { cancel, centreOf, drag } from './pointer';
 
 const DESK = { width: 1280, height: 800 };
@@ -116,12 +116,12 @@ test('a cancelled gesture drops the page rather than turning it', async () => {
   expect(book.getAttribute('data-spread')).toBe('1');
 });
 
-test('the cover has no edge to turn back from, and the last page none to turn forward', async () => {
+test('the cover has no edge to turn back from, and the back cover none to turn forward', async () => {
   const cover = await renderAt('/');
   expect(cover.container.querySelector('[data-turn-zone="previous"]')).toBeNull();
   expect(cover.container.querySelector('[data-turn-zone="next"]')).not.toBeNull();
 
-  const end = await renderAt(reviewPath(reviews[reviews.length - 1].slug));
+  const end = await renderAt(BACK_PATH);
   expect(end.container.querySelector('[data-turn-zone="next"]')).toBeNull();
 });
 

@@ -7,9 +7,13 @@ import { reviews } from './data/reviews';
 export type Page =
   | { path: string; label: string; kind: 'cover' }
   | { path: string; label: string; kind: 'contents' }
-  | { path: string; label: string; kind: 'review'; slug: string };
+  | { path: string; label: string; kind: 'review'; slug: string }
+  | { path: string; label: string; kind: 'blank' }
+  | { path: string; label: string; kind: 'back' };
 
 export const CONTENTS_PATH = '/contents';
+export const BACK_PATH = '/back';
+const BLANK_PATH = '/blank';
 
 export function reviewPath(slug: string): string {
   return `/reviews/${slug}`;
@@ -19,7 +23,7 @@ export function reviewPath(slug: string): string {
 // like any other — that is what makes it paginate, print and key-navigate for free, and
 // what keeps the numbers it lists honest: they are read back out of this same list.
 export function buildPages(list: Review[]): Page[] {
-  return [
+  const body: Page[] = [
     { path: '/', label: 'Cover', kind: 'cover' },
     { path: CONTENTS_PATH, label: 'Contents', kind: 'contents' },
     ...list.map((review): Page => ({
@@ -29,6 +33,19 @@ export function buildPages(list: Review[]): Page[] {
       slug: review.slug,
     })),
   ];
+
+  // The back cover mirrors the front: alone on its own leaf, with nothing to face. The
+  // front gets that for free — index 0 has no index -1 to pair with — but the back is
+  // whatever index comes after the last review, which pairs it with that review's page
+  // whenever the count so far is even. A blank leaf absorbs that pairing so the back
+  // cover itself always lands on an odd index, with no index after it to fill the other
+  // side of its spread.
+  if (body.length % 2 === 0) {
+    body.push({ path: BLANK_PATH, label: 'Blank', kind: 'blank' });
+  }
+  body.push({ path: BACK_PATH, label: 'Back cover', kind: 'back' });
+
+  return body;
 }
 
 export const pages: Page[] = buildPages(reviews);

@@ -4,11 +4,10 @@ import { userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH, pages } from '../../src/pages';
+import { BACK_PATH, CONTENTS_PATH, pages } from '../../src/pages';
 
 const total = pages.length;
 const first = reviews[0];
-const last = reviews[reviews.length - 1];
 
 function renderAt(path: string) {
   return render(
@@ -69,13 +68,15 @@ test('paging back from the cover does nothing', async () => {
   await expect.element(screen.getByText(`1 / ${total}`)).toBeVisible();
 });
 
-test('paging forward from the last review does nothing', async () => {
-  const screen = await renderAt(`/reviews/${last.slug}`);
+test('paging forward from the back cover does nothing', async () => {
+  const screen = await renderAt(BACK_PATH);
 
   await expect.element(screen.getByText(`${total} / ${total}`)).toBeVisible();
 
   await userEvent.keyboard('{ArrowRight}');
 
-  await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(last.movie);
+  await expect
+    .element(screen.getByRole('heading', { level: 1 }))
+    .toHaveTextContent('Amateur Critic Magazine');
   await expect.element(screen.getByText(`${total} / ${total}`)).toBeVisible();
 });

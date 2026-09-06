@@ -4,7 +4,7 @@ import { page } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH, pages, reviewPath } from '../../src/pages';
+import { BACK_PATH, CONTENTS_PATH, pages, reviewPath } from '../../src/pages';
 
 const A4 = 210 / 297;
 
@@ -83,6 +83,23 @@ test('the cover has nothing to face, so it is alone on the right', async () => {
   const spread = screen.container.querySelector('[data-spread]')!;
   expect(leaves[0].getBoundingClientRect().left).toBeGreaterThan(
     spread.getBoundingClientRect().left,
+  );
+});
+
+// The back cover mirrors the front: alone with nothing to face, but on the left, since
+// it always lands on an odd page index.
+test('the back cover has nothing to face, so it is alone on the left', async () => {
+  await page.viewport(DESK.width, DESK.height);
+  const screen = await renderAt(BACK_PATH);
+  await expect.element(screen.getByRole('heading', { level: 1 })).toBeVisible();
+
+  const leaves = leavesOf(screen.container);
+  expect(leaves).toHaveLength(1);
+  expect(leaves[0].getAttribute('data-page')).toBe(BACK_PATH);
+
+  const spread = screen.container.querySelector('[data-spread]')!;
+  expect(leaves[0].getBoundingClientRect().right).toBeLessThan(
+    spread.getBoundingClientRect().right,
   );
 });
 
