@@ -83,6 +83,24 @@
     calc((100svh - var(--sheet-gutter) * 2 - var(--desk-chrome)) * 210 / 297)
   );
 
+  /* The page's own margins. They were percentages on each page component, which resolve
+     against the leaf's width and so came to the same thing — but the columns below need
+     the text box as a *length*, and one ruler is better than two. */
+  --page-pad-x: calc(var(--leaf-w) * 0.09);
+  --page-pad-y: calc(var(--leaf-w) * 0.06);
+
+  /* At least as wide as the text box, so exactly one column fits across a page and every
+     column the article runs over into is a page wide. */
+  --page-w: calc(var(--leaf-w) - var(--page-pad-x) * 2);
+  --page-gap: calc(var(--leaf-w) * 0.08);
+
+  /* The size body copy is set at, and the one knob for it: every article declares this and
+     everything smaller or larger on a page — the eyebrows, the score, the dateline, the
+     drop cap, the seal — is an `em` of it. In `cqw`, so it is a proportion of the page and
+     not of the screen. The value is resolved where it is used, which is always inside a
+     leaf, so the leaf is what it is a percentage of. */
+  --page-type: 2.2cqw;
+
   &[data-mode='spread'] {
     --leaves: 2;
   }
@@ -108,6 +126,85 @@
 /* A page of the issue is a sheet of A4 — 210 x 297 mm, ISO 216. The height comes from the
    ratio rather than from the content: a review that outruns the page scrolls inside it,
    which is what keeps the paper A4 instead of merely A4-wide. */
+/* The window the book is read through. It is exactly the size the book is at fit, stated in
+   the same terms the pager uses, so magnifying happens inside a box that never moves: the
+   desk's centring, the pager's width and the leaf's own ruler are none of them touched.
+   Scrollbars are hidden — the desk is a desk, and the page is moved by dragging it. */
+@utility magazine-viewport {
+  position: relative;
+  width: calc(var(--leaf-w) * var(--leaves));
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Out of the box tree entirely when printing, so the printed page is the one the leaves
+     always made: desk, book, leaves, and a page break between them. */
+  @media print {
+    display: contents;
+  }
+}
+
+/* The band under the book: the pager and the zoom controls, sharing the height the desk set
+   aside for chrome when it measured the leaf. Adding to it must never grow `--desk-chrome`,
+   because that height comes straight off every page in the issue. */
+@utility magazine-chrome {
+  display: flex;
+  align-items: center;
+  gap: 2%;
+  height: var(--desk-chrome);
+  width: calc(var(--leaf-w) * var(--leaves));
+  padding-inline: 2%;
+
+  @media print {
+    display: none;
+  }
+}
+
+@utility magazine-zoom {
+  /* So a scroll offset is plain pixels from the window's top-left corner. */
+  transform-origin: 0 0;
+
+  @media print {
+    display: contents;
+  }
+}
+
+/* Magnification exists only while the reader has asked for it — the same rule perspective
+   follows. At fit there is no transform and no clip, which is what keeps type rasterising
+   crisply and, just as much, what lets a leaf in the air overhang the page: under
+   perspective a turning leaf projects well outside the book's box, and a window clipped to
+   the book would slice it. */
+[data-zoom='in'] .magazine-viewport {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+[data-zoom='in'] .magazine-zoom {
+  transform: scale(var(--zoom, 1));
+}
+
+/* While the page is magnified a drag moves the paper, so none of it may be handed to the
+   browser: `pan-y` would let it claim a downward drag as a scroll and cancel the pointer
+   mid-pan. It belongs on `.leaf-page` as well as `.a4-leaf` for the same reason `pan-y`
+   does — a touch resolves its touch-action from what it landed on up to that element's
+   scroll container. At fit none of this matches, and swipe-to-turn is untouched. */
+[data-zoom='in'] .a4-leaf,
+[data-zoom='in'] .leaf-page,
+[data-zoom='in'] .page-window,
+[data-zoom='in'] .magazine-viewport {
+  touch-action: none;
+}
+
+/* A drag across a magnified page is the reader moving the paper, not choosing words on it.
+   Left selectable, a finger that came down on the type starts a selection instead — which
+   is why a pan that began on a word behaved differently from one that began on a margin. */
+[data-zoom='in'] .a4-leaf {
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 @utility a4-leaf {
   width: var(--leaf-w);
   aspect-ratio: 210 / 297;
@@ -115,6 +212,62 @@
   @media print {
     width: 210mm;
     height: 297mm;
+  }
+}
+
+/* The page's margins. The clip is on the window inside it and not here, because overflow
+   is clipped at the padding edge: a box that held both would show a margin's worth of the
+   next column down either side of the page. */
+@utility page-box {
+  min-height: 0;
+  flex: 1 1 0%;
+  padding: var(--page-pad-y) var(--page-pad-x);
+}
+
+/* The text box, and the window the article is read through: exactly one column wide, so
+   the columns on either side of the one on show are clipped away onto their own leaves. */
+@utility page-window {
+  height: 100%;
+  overflow: hidden;
+
+  /* `overflow` makes this a scroll container, and a touch resolves its touch-action from
+     what it landed on only as far as *its* scroll container — which, for a finger that
+     landed on the type, is this and not the leaf. Without the declaration repeated here the
+     leaf's `pan-y` never reaches the text, and the browser is free to claim any drag that
+     began on a word. Anything that adds a scroller inside a page has to carry this. */
+  touch-action: pan-y;
+}
+
+/* The article itself, poured into leaf-wide columns. The browser fragments it — the same
+   engine that breaks a page for a printer — so nothing here measures a line or counts a
+   word, and a paragraph splits between two pages the way it would in print. */
+@utility page-flow {
+  height: 100%;
+  column-width: var(--page-w);
+  column-gap: var(--page-gap);
+
+  /* Fill each column to the foot of the page before starting the next. Balanced columns
+     would spread a short review evenly over however many pages it happened to need. */
+  column-fill: auto;
+
+  /* The page on show. Every other column of the article is off the paper to one side,
+     clipped away by the box. */
+  transform: translateX(calc(var(--part, 0) * -1 * (100% + var(--page-gap))));
+}
+
+/* Where the issue is typeset: out of flow, unpainted, and off the printer, but laid out —
+   an article has to be a real leaf wide before it can say how many leaves it takes. */
+@utility composing-room {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+
+  @media print {
+    display: none;
   }
 }
 
@@ -244,11 +397,8 @@
   perspective-origin: 50% 45%;
 }
 
-/* Nobody scrolls a page that is in the air. */
-[data-phase='drag'] .leaf-scroll,
-[data-phase='animate'] .leaf-scroll {
-  overflow: hidden;
-}
+/* No rule is needed to freeze a page while its leaf is in the air: no page scrolls. An
+   article that outruns its leaf is continued on the next one. */
 
 @utility drop-cap {
   &::first-letter {

@@ -46,6 +46,7 @@ export type Flip = {
   displayed: number;
   phase: Phase;
   turning: Turning | undefined;
+  abort: () => void;
   bookRef: React.RefObject<HTMLDivElement | null>;
   turnRef: React.RefObject<HTMLDivElement | null>;
   grab: (event: React.PointerEvent<HTMLElement>, direction: Direction) => void;
@@ -64,6 +65,9 @@ export function useFlip(
   pageIndex: number,
   spreads: number,
   onTurn: (spread: number) => void,
+  // How the issue is currently cut into pages — the mode it is read in, and the typesetting
+  // it was counted into. See the guard below.
+  edition: string,
 ): Flip {
   const target = pageIndex < 0 ? undefined : spreadOf(mode, pageIndex);
 
@@ -75,7 +79,26 @@ export function useFlip(
   const turnRef = useRef<HTMLDivElement | null>(null);
   const animation = useRef<Animation | undefined>(undefined);
   const gesture = useRef<Gesture | undefined>(undefined);
-  const displayedMode = useRef(mode);
+  const cut = `${mode}:${edition}`;
+  const [displayedCut, setDisplayedCut] = useState(cut);
+
+  // Re-cutting the issue moves the reader's page to a different number without their having
+  // turned anything: a change of mode pairs the leaves up differently, and a re-typesetting
+  // gives an article that ran over the pages it needs. Either way nothing turned — the same
+  // page is simply somewhere else in the book — so the leaf is moved rather than flown.
+  //
+  // Adjusted here, during the render, and not in an effect. An effect runs after the browser
+  // has painted, so there would be one frame holding a spread number counted against the old
+  // cut and read against the new one — which is a different page. On screen nobody sees it,
+  // because the corrected frame lands immediately after. A printer does: it lays the page out
+  // at paper width, which re-cuts the issue to a single leaf, and photographs that first
+  // frame. Printing any review used to hand back a different one.
+  if (target !== undefined && phase !== 'drag' && displayedCut !== cut) {
+    setDisplayedCut(cut);
+    setDisplayed(target);
+    setPhase('rest');
+    setTurning(undefined);
+  }
 
   // The spread the URL was last seen pointing at. A drag navigates the moment the reader
   // lets go, and that navigation lands one commit after the state that starts the settle —
@@ -102,6 +125,13 @@ export function useFlip(
     turned.current = onTurn;
   });
 
+  // The leaf the re-cut above took out of the air. Before the paint, so the cancelled turn
+  // is never a frame of its own; the landing is already guarded by the layout effect's
+  // cleanup, so this is only making sure nothing is left running on a detached node.
+  useLayoutEffect(() => {
+    animation.current?.cancel();
+  }, [cut]);
+
   // Deps are all primitives or state objects. A dep on anything derived — a spread, a
   // plan — would be a fresh object on every render once the compiler is not memoising,
   // which is the case in the browser tests: the magazine would turn pages forever.
@@ -110,17 +140,6 @@ export function useFlip(
 
     const moved = target !== seenTarget.current;
     seenTarget.current = target;
-
-    // Changing mode re-cuts the issue into different spreads. Nothing turned; the reader
-    // is looking at a differently sized book.
-    if (displayedMode.current !== mode) {
-      displayedMode.current = mode;
-      animation.current?.cancel();
-      setDisplayed(target);
-      setPhase('rest');
-      setTurning(undefined);
-      return;
-    }
 
     if (phase === 'rest') {
       if (target === displayed) return;
@@ -151,7 +170,7 @@ export function useFlip(
         progress: 0,
       });
     }
-  }, [target, displayed, phase, mode, turning]);
+  }, [target, displayed, phase, cut, turning]);
 
   // A layout effect, so the leaf's first painted frame is the one it was already at —
   // which for a fresh turn is 0 degrees, arranged to be indistinguishable from the spread
@@ -351,6 +370,27 @@ export function useFlip(
     setPhase('drag');
   }
 
+  // The reader has taken the gesture for something else — a second finger arriving to pinch,
+  // or a drag on a page they are looking at closely. Whatever was in the air comes down
+  // where it started, which is the same thing a `pointercancel` does; a gesture that had not
+  // yet chosen a direction was never a page turn and is simply dropped.
+  function abort() {
+    const held = gesture.current;
+    if (!held) return;
+
+    gesture.current = undefined;
+    if (held.direction === undefined) return;
+
+    setTurning({
+      from: displayedAt.current,
+      to: held.to,
+      direction: held.direction,
+      settle: 'from',
+      progress: held.progress,
+    });
+    setPhase('animate');
+  }
+
   // A finger has the whole page to swipe across; a mouse has the page edge to take hold
   // of, which is a more precise instrument and a less accidental one.
   function swipe(event: React.PointerEvent<HTMLElement>) {
@@ -373,5 +413,5 @@ export function useFlip(
     };
   }
 
-  return { displayed, phase, turning, bookRef, turnRef, grab, swipe };
+  return { abort, displayed, phase, turning, bookRef, turnRef, grab, swipe };
 }

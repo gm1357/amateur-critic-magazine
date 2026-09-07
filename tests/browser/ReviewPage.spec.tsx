@@ -3,7 +3,7 @@ import { expect, test } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { pages } from '../../src/pages';
+import { folioOf, openAt, totalOf } from './issue';
 
 // Expectations are derived from the real `reviews` array so that editing a JSON file
 // does not break tests that are not about that review.
@@ -49,8 +49,16 @@ test('the page number follows the URL, not the click history', async () => {
     </MemoryRouter>,
   );
 
-  // Cover, contents, the first review, then this one.
-  await expect.element(screen.getByText(`4 / ${pages.length}`)).toBeVisible();
+  await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(review.movie);
+
+  // Deep-linked rather than paged to. Which folio that is depends on how much paper the
+  // articles ahead of it took, so what is asserted is that the issue opened *here* — past
+  // the cover and the contents, and inside its own covers.
+  const folio = Number(folioOf(screen.container));
+
+  expect(openAt(screen.container)).toEqual([`/reviews/${review.slug}`]);
+  expect(folio).toBeGreaterThan(2);
+  expect(folio).toBeLessThanOrEqual(totalOf(screen.container));
 });
 
 test('an unknown slug gets a not-found page with no magazine chrome', async () => {

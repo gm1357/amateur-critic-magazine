@@ -4,8 +4,8 @@ import { page, userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH, findPageIndex, pages, reviewPath } from '../../src/pages';
-import { spreadOf } from '../../src/spread';
+import { BACK_PATH, CONTENTS_PATH } from '../../src/pages';
+import { folioOf, openAt } from './issue';
 
 const DESK = { width: 1280, height: 800 };
 const viewport = { width: window.innerWidth, height: window.innerHeight };
@@ -88,13 +88,14 @@ test('the arrow keys turn the page too', async () => {
   await page.viewport(DESK.width, DESK.height);
   const screen = await renderAt(CONTENTS_PATH);
   const book = bookOf(screen.container);
+  const from = Number(book.getAttribute('data-spread'));
+  const open = openAt(screen.container);
 
   await userEvent.keyboard('{ArrowRight}');
 
-  await expect.poll(() => book.getAttribute('data-spread')).toBe('2');
-  await expect
-    .element(screen.getByRole('heading', { level: 1, name: reviews[1].movie }))
-    .toBeVisible();
+  // One leaf on, and neither of the pages that were open is still on the desk.
+  await expect.poll(() => Number(book.getAttribute('data-spread'))).toBe(from + 1);
+  expect(openAt(screen.container).some((path) => open.includes(path))).toBe(false);
 });
 
 test('turning back closes the book onto the cover', async () => {
@@ -116,23 +117,26 @@ test('a contents entry several pages ahead is still one turn', async () => {
   const screen = await renderAt(CONTENTS_PATH);
   const book = bookOf(screen.container);
   const last = reviews[reviews.length - 1];
-  // Read off the model rather than written down: the jump is however far the back of the
-  // issue happens to be from the contents, which every review committed since changes.
-  const destination = String(spreadOf('spread', findPageIndex(pages, reviewPath(last.slug))));
+  const from = book.getAttribute('data-spread')!;
+
+  // Every value the book takes, rather than every value a poll happened to catch: how far
+  // the back of the issue is from the contents depends on how much paper the reviews in
+  // between took, so what is asserted is the shape of the journey, not its length.
+  const seen = new Set<string>([from]);
+  const watch = new MutationObserver(() => seen.add(book.getAttribute('data-spread')!));
+  watch.observe(book, { attributeFilter: ['data-spread'], attributes: true });
 
   await screen.getByRole('link', { name: last.movie }).click();
+  await expect.element(screen.getByRole('heading', { level: 1, name: last.movie })).toBeVisible();
+  await expect.poll(() => book.getAttribute('data-phase')).toBe('rest');
+  watch.disconnect();
 
-  const seen = new Set<string>();
-  await expect
-    .poll(() => {
-      seen.add(book.getAttribute('data-spread')!);
-      return book.getAttribute('data-spread');
-    })
-    .toBe(destination);
+  const destination = book.getAttribute('data-spread')!;
 
   // One turn, not several: the issue was on the spread it left, and then on the spread it
   // arrived at, never on any of the ones in between.
-  expect([...seen].sort()).toEqual(['1', destination].sort());
+  expect(Number(destination)).toBeGreaterThan(Number(from) + 1);
+  expect([...seen].sort()).toEqual([from, destination].sort());
 });
 
 test('paging to the end and back again leaves the issue where it started', async () => {
@@ -144,12 +148,12 @@ test('paging to the end and back again leaves the issue where it started', async
   await userEvent.keyboard('{ArrowLeft}');
   await expect.poll(() => book.getAttribute('data-spread')).toBe('0');
 
-  await expect.element(screen.getByText(`1 / ${pages.length}`)).toBeVisible();
-  expect(screen.container.querySelector('[data-page]')!.getAttribute('data-page')).toBe('/');
+  expect(folioOf(screen.container)).toBe('1');
+  expect(openAt(screen.container)).toEqual(['/']);
 });
 
 test('the last page has nothing to turn onto', async () => {
-  const screen = await renderAt(reviewPath(reviews[reviews.length - 1].slug));
+  const screen = await renderAt(BACK_PATH);
   const book = bookOf(screen.container);
   const spread = book.getAttribute('data-spread');
 

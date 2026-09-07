@@ -4,7 +4,8 @@ import { page, userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH, pages, reviewPath } from '../../src/pages';
+import { BACK_PATH, CONTENTS_PATH, reviewPath } from '../../src/pages';
+import { folioOf, openAt } from './issue';
 import { cancel, centreOf, drag } from './pointer';
 
 const DESK = { width: 1280, height: 800 };
@@ -39,17 +40,23 @@ function leafWidth(container: HTMLElement) {
   return container.querySelector('.a4-leaf')!.getBoundingClientRect().width;
 }
 
+// Which spread is open, as a number. Turns are asserted as moves from wherever the issue
+// happened to open: it typesets itself, so an article that ran over has already moved
+// every spread that comes after it.
+function spreadAt(book: Element): number {
+  return Number(book.getAttribute('data-spread'));
+}
+
 test('dragging the page edge most of the way across turns the page', async () => {
   const screen = await renderAt(CONTENTS_PATH);
   const book = bookOf(screen.container);
+  const from = spreadAt(book);
   const grip = centreOf(zoneOf(screen.container, 'next'));
 
   await drag(grip, { x: grip.x - leafWidth(screen.container) * 0.8, y: grip.y });
 
-  await expect.poll(() => book.getAttribute('data-spread')).toBe('2');
-  await expect
-    .element(screen.getByRole('heading', { level: 1, name: reviews[0].movie }))
-    .toBeVisible();
+  await expect.poll(() => spreadAt(book)).toBe(from + 1);
+  expect(openAt(screen.container)).not.toContain(CONTENTS_PATH);
 });
 
 test('a page let go of before halfway falls back', async () => {
@@ -60,8 +67,8 @@ test('a page let go of before halfway falls back', async () => {
   await drag(grip, { x: grip.x - leafWidth(screen.container) * 0.2, y: grip.y });
 
   await expect.poll(() => book.getAttribute('data-phase')).toBe('rest');
-  expect(book.getAttribute('data-spread')).toBe('1');
-  await expect.element(screen.getByText(`2 / ${pages.length}`)).toBeVisible();
+  expect(openAt(screen.container)).toEqual([CONTENTS_PATH]);
+  expect(folioOf(screen.container)).toBe('2');
 });
 
 test('the leaf follows the hand while it is held', async () => {
@@ -89,11 +96,12 @@ test('the leaf follows the hand while it is held', async () => {
 test('the edge can be taken hold of in either direction', async () => {
   const screen = await renderAt(reviewPath(reviews[0].slug));
   const book = bookOf(screen.container);
+  const from = spreadAt(book);
   const grip = centreOf(zoneOf(screen.container, 'previous'));
 
   await drag(grip, { x: grip.x + leafWidth(screen.container) * 0.8, y: grip.y });
 
-  await expect.poll(() => book.getAttribute('data-spread')).toBe('1');
+  await expect.poll(() => spreadAt(book)).toBe(from - 1);
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Contents' })).toBeVisible();
 });
 
@@ -113,15 +121,15 @@ test('a cancelled gesture drops the page rather than turning it', async () => {
   cancel(held, grip);
 
   await expect.poll(() => book.getAttribute('data-phase')).toBe('rest');
-  expect(book.getAttribute('data-spread')).toBe('1');
+  expect(openAt(screen.container)).toEqual([CONTENTS_PATH]);
 });
 
-test('the cover has no edge to turn back from, and the last page none to turn forward', async () => {
+test('the cover has no edge to turn back from, and the back cover none to turn forward', async () => {
   const cover = await renderAt('/');
   expect(cover.container.querySelector('[data-turn-zone="previous"]')).toBeNull();
   expect(cover.container.querySelector('[data-turn-zone="next"]')).not.toBeNull();
 
-  const end = await renderAt(reviewPath(reviews[reviews.length - 1].slug));
+  const end = await renderAt(BACK_PATH);
   expect(end.container.querySelector('[data-turn-zone="next"]')).toBeNull();
 });
 
@@ -129,12 +137,17 @@ test('on a wide desk a drag turns a whole leaf, both pages of it', async () => {
   await page.viewport(DESK.width, DESK.height);
   const screen = await renderAt(CONTENTS_PATH);
   const book = bookOf(screen.container);
+  const from = spreadAt(book);
+  const open = openAt(screen.container);
   const grip = centreOf(zoneOf(screen.container, 'next'));
 
   await drag(grip, { x: grip.x - leafWidth(screen.container) * 0.8, y: grip.y });
 
-  await expect.poll(() => book.getAttribute('data-spread')).toBe('2');
-  await expect.element(screen.getByText(`4–5 / ${pages.length}`)).toBeVisible();
+  // One turn past both pages that were open, and the pager prints the range it landed on.
+  await expect.poll(() => spreadAt(book)).toBe(from + 1);
+  expect(openAt(screen.container)).toHaveLength(2);
+  expect(openAt(screen.container).some((path) => open.includes(path))).toBe(false);
+  expect(folioOf(screen.container)).toMatch(/^\d+–\d+$/);
 });
 
 // Real input, through the browser's own hit-testing and event ordering, rather than
@@ -142,6 +155,7 @@ test('on a wide desk a drag turns a whole leaf, both pages of it', async () => {
 test('a real pointer drag turns the page as well', async () => {
   const screen = await renderAt(CONTENTS_PATH);
   const book = bookOf(screen.container);
+  const from = spreadAt(book);
 
   await userEvent.dragAndDrop(
     zoneOf(screen.container, 'next'),
@@ -154,7 +168,7 @@ test('a real pointer drag turns the page as well', async () => {
   );
 
   await expect.poll(() => book.getAttribute('data-phase')).toBe('rest');
-  expect(book.getAttribute('data-spread')).toBe('2');
+  expect(spreadAt(book)).toBe(from + 1);
 });
 
 // A leaf let go of past halfway carries on from where the hand left it. The bug this
