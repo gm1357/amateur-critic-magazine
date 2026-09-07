@@ -6,6 +6,7 @@ import { anchorOf, planTurn, spreadAt, spreadCount, spreadFolio, spreadOf } from
 import { useFlip } from '../useFlip';
 import { useMode } from '../useMode';
 import { useTypeset } from '../useTypeset';
+import { useZoom } from '../useZoom';
 import ComposingRoom from './ComposingRoom';
 import { LEAF } from './Leaf';
 import NotFound from './NotFound';
@@ -13,6 +14,7 @@ import PageNav from './PageNav';
 import Spread from './Spread';
 import TurnZone from './TurnZone';
 import TurnLayer from './TurnLayer';
+import ZoomControls from './ZoomControls';
 
 const EDITABLE = /^(?:INPUT|TEXTAREA|SELECT)$/;
 
@@ -32,7 +34,7 @@ export default function Magazine() {
   const index = findPageIndex(pages, pathname);
   const spreads = spreadCount(mode, pages);
 
-  const { bookRef, displayed, grab, phase, swipe, turnRef, turning } = useFlip(
+  const { abort, bookRef, displayed, grab, phase, swipe, turnRef, turning } = useFlip(
     mode,
     index,
     spreads,
@@ -44,6 +46,26 @@ export default function Magazine() {
     },
     edition,
   );
+
+  // Looking closer is a view laid over the page, not a change to it: the transform never
+  // reaches what a leaf measures, so the issue cannot re-typeset itself by being looked at.
+  const zoom = useZoom(abort);
+
+  // A magnified page is read by dragging it about, so it is not also turned by dragging —
+  // turning stays on the pager, the arrow keys and the contents. The zoom always gets the
+  // press, though: a pinch and a double tap have to be offered from the whole page too, and
+  // when either of them takes the gesture it stands the half-opened turn down itself.
+  function onPress(event: React.PointerEvent<HTMLElement>) {
+    if (!zoom.zoomed) swipe(event);
+    zoom.press(event);
+  }
+
+  // The reader is still reading at the same magnification, and a new page starts at its
+  // head. Keyed on the landed spread rather than the pathname, so the paper is not pulled
+  // out from under a turn that is still in the air.
+  useEffect(() => {
+    zoom.viewportRef.current?.scrollTo(0, 0);
+  }, [displayed, edition, mode, zoom.viewportRef]);
 
   // Re-typesetting can shorten an article, and a reader standing on its last page would be
   // left holding a URL the issue no longer prints. That is not a missing page, it is the
@@ -87,7 +109,7 @@ export default function Magazine() {
 
   return (
     <IssueProvider value={pages}>
-      <div className={DESK} data-mode={mode} ref={desk}>
+      <div className={DESK} data-mode={mode} data-zoom={zoom.zoomed ? 'in' : 'fit'} ref={desk}>
         {/* A pathname the page list does not recognise was never printed. That -1 is the
             one signal for "not a page of this issue", and it takes the chrome with it. */}
         {index < 0 ? (
@@ -98,28 +120,47 @@ export default function Magazine() {
           </div>
         ) : (
           <>
-            <Spread
-              index={displayed}
-              ref={bookRef}
-              left={turn ? turn.staticLeft : resting.left}
-              mode={mode}
-              onSwipe={swipe}
-              phase={phase}
-              right={turn ? turn.staticRight : resting.right}
-            >
-              {turn && <TurnLayer ref={turnRef} turn={turn} />}
+            {/* The window the book is looked at through, and the paper inside it that the
+                magnification scales. Both are inert at fit. */}
+            <div className="magazine-viewport" ref={zoom.viewportRef}>
+              <div
+                className="magazine-zoom"
+                style={{ '--zoom': zoom.scale } as React.CSSProperties}
+              >
+                <Spread
+                  index={displayed}
+                  ref={bookRef}
+                  left={turn ? turn.staticLeft : resting.left}
+                  mode={mode}
+                  onSwipe={onPress}
+                  phase={phase}
+                  right={turn ? turn.staticRight : resting.right}
+                >
+                  {turn && <TurnLayer ref={turnRef} turn={turn} />}
 
-              {/* Only an edge with a page behind it can be taken hold of. */}
-              {displayed > 0 && <TurnZone direction="backward" onGrab={grab} />}
-              {displayed < spreads - 1 && <TurnZone direction="forward" onGrab={grab} />}
-            </Spread>
+                  {/* Only an edge with a page behind it can be taken hold of — and only
+                      while the whole page is on the desk to take hold of. */}
+                  {!zoom.zoomed && displayed > 0 && <TurnZone direction="backward" onGrab={grab} />}
+                  {!zoom.zoomed && displayed < spreads - 1 && (
+                    <TurnZone direction="forward" onGrab={grab} />
+                  )}
+                </Spread>
+              </div>
+            </div>
 
-            <PageNav
-              folio={spreadFolio(pages, spreadAt(mode, pages, spread))}
-              next={next}
-              previous={previous}
-              total={pages.length}
-            />
+            {/* The desk's chrome band: where you are in the issue, and how closely you are
+                looking at it. `--desk-chrome` is the height it is given, and the leaf is
+                measured around it. */}
+            <div className="magazine-chrome">
+              <PageNav
+                folio={spreadFolio(pages, spreadAt(mode, pages, spread))}
+                next={next}
+                previous={previous}
+                total={pages.length}
+              />
+
+              <ZoomControls onIn={zoom.stepIn} onOut={zoom.stepOut} scale={zoom.scale} />
+            </div>
           </>
         )}
 

@@ -126,6 +126,76 @@
 /* A page of the issue is a sheet of A4 — 210 x 297 mm, ISO 216. The height comes from the
    ratio rather than from the content: a review that outruns the page scrolls inside it,
    which is what keeps the paper A4 instead of merely A4-wide. */
+/* The window the book is read through. It is exactly the size the book is at fit, stated in
+   the same terms the pager uses, so magnifying happens inside a box that never moves: the
+   desk's centring, the pager's width and the leaf's own ruler are none of them touched.
+   Scrollbars are hidden — the desk is a desk, and the page is moved by dragging it. */
+@utility magazine-viewport {
+  position: relative;
+  width: calc(var(--leaf-w) * var(--leaves));
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Out of the box tree entirely when printing, so the printed page is the one the leaves
+     always made: desk, book, leaves, and a page break between them. */
+  @media print {
+    display: contents;
+  }
+}
+
+/* The band under the book: the pager and the zoom controls, sharing the height the desk set
+   aside for chrome when it measured the leaf. Adding to it must never grow `--desk-chrome`,
+   because that height comes straight off every page in the issue. */
+@utility magazine-chrome {
+  display: flex;
+  align-items: center;
+  gap: 2%;
+  height: var(--desk-chrome);
+  width: calc(var(--leaf-w) * var(--leaves));
+  padding-inline: 2%;
+
+  @media print {
+    display: none;
+  }
+}
+
+@utility magazine-zoom {
+  /* So a scroll offset is plain pixels from the window's top-left corner. */
+  transform-origin: 0 0;
+
+  @media print {
+    display: contents;
+  }
+}
+
+/* Magnification exists only while the reader has asked for it — the same rule perspective
+   follows. At fit there is no transform and no clip, which is what keeps type rasterising
+   crisply and, just as much, what lets a leaf in the air overhang the page: under
+   perspective a turning leaf projects well outside the book's box, and a window clipped to
+   the book would slice it. */
+[data-zoom='in'] .magazine-viewport {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+[data-zoom='in'] .magazine-zoom {
+  transform: scale(var(--zoom, 1));
+}
+
+/* While the page is magnified a drag moves the paper, so none of it may be handed to the
+   browser: `pan-y` would let it claim a downward drag as a scroll and cancel the pointer
+   mid-pan. It belongs on `.leaf-page` as well as `.a4-leaf` for the same reason `pan-y`
+   does — a touch resolves its touch-action from what it landed on up to that element's
+   scroll container. At fit none of this matches, and swipe-to-turn is untouched. */
+[data-zoom='in'] .a4-leaf,
+[data-zoom='in'] .leaf-page,
+[data-zoom='in'] .magazine-viewport {
+  touch-action: none;
+}
+
 @utility a4-leaf {
   width: var(--leaf-w);
   aspect-ratio: 210 / 297;

@@ -13,12 +13,12 @@ type PageNavProps = {
 // The pager sits on the desk rather than on the paper: a control printed on a page would
 // turn away with it. It follows the URL, not the paper, so during a drag it reports where
 // you are rather than what you can see.
+//
+// It is sized by the chrome band it shares with the zoom controls, which is what owns
+// `--desk-chrome` — the height the desk sets aside for it when it measures a leaf.
 export default function PageNav({ previous, next, folio, total }: PageNavProps) {
   return (
-    <nav
-      aria-label="Pages"
-      className="grid h-(--desk-chrome) w-[calc(var(--leaf-w)*var(--leaves))] grid-cols-3 items-center px-[2%] print:hidden"
-    >
+    <nav aria-label="Pages" className="grid flex-1 grid-cols-3 items-center">
       {previous ? (
         <Link className={`${linkClass} justify-self-start`} rel="prev" to={previous.path}>
           <span aria-hidden="true">←</span> Previous

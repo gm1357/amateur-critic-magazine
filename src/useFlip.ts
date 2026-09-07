@@ -46,6 +46,7 @@ export type Flip = {
   displayed: number;
   phase: Phase;
   turning: Turning | undefined;
+  abort: () => void;
   bookRef: React.RefObject<HTMLDivElement | null>;
   turnRef: React.RefObject<HTMLDivElement | null>;
   grab: (event: React.PointerEvent<HTMLElement>, direction: Direction) => void;
@@ -358,6 +359,27 @@ export function useFlip(
     setPhase('drag');
   }
 
+  // The reader has taken the gesture for something else — a second finger arriving to pinch,
+  // or a drag on a page they are looking at closely. Whatever was in the air comes down
+  // where it started, which is the same thing a `pointercancel` does; a gesture that had not
+  // yet chosen a direction was never a page turn and is simply dropped.
+  function abort() {
+    const held = gesture.current;
+    if (!held) return;
+
+    gesture.current = undefined;
+    if (held.direction === undefined) return;
+
+    setTurning({
+      from: displayedAt.current,
+      to: held.to,
+      direction: held.direction,
+      settle: 'from',
+      progress: held.progress,
+    });
+    setPhase('animate');
+  }
+
   // A finger has the whole page to swipe across; a mouse has the page edge to take hold
   // of, which is a more precise instrument and a less accidental one.
   function swipe(event: React.PointerEvent<HTMLElement>) {
@@ -380,5 +402,5 @@ export function useFlip(
     };
   }
 
-  return { displayed, phase, turning, bookRef, turnRef, grab, swipe };
+  return { abort, displayed, phase, turning, bookRef, turnRef, grab, swipe };
 }
