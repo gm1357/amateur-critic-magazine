@@ -192,8 +192,17 @@
    scroll container. At fit none of this matches, and swipe-to-turn is untouched. */
 [data-zoom='in'] .a4-leaf,
 [data-zoom='in'] .leaf-page,
+[data-zoom='in'] .page-window,
 [data-zoom='in'] .magazine-viewport {
   touch-action: none;
+}
+
+/* A drag across a magnified page is the reader moving the paper, not choosing words on it.
+   Left selectable, a finger that came down on the type starts a selection instead — which
+   is why a pan that began on a word behaved differently from one that began on a margin. */
+[data-zoom='in'] .a4-leaf {
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 @utility a4-leaf {
@@ -220,6 +229,13 @@
 @utility page-window {
   height: 100%;
   overflow: hidden;
+
+  /* `overflow` makes this a scroll container, and a touch resolves its touch-action from
+     what it landed on only as far as *its* scroll container — which, for a finger that
+     landed on the type, is this and not the leaf. Without the declaration repeated here the
+     leaf's `pan-y` never reaches the text, and the browser is free to claim any drag that
+     began on a word. Anything that adds a scroller inside a page has to carry this. */
+  touch-action: pan-y;
 }
 
 /* The article itself, poured into leaf-wide columns. The browser fragments it — the same

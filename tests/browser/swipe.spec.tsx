@@ -87,8 +87,14 @@ test('the page body leaves vertical panning to the browser, and only vertical', 
   const leaf = screen.container.querySelector('.a4-leaf')!;
   const body = leaf.querySelector('.leaf-page')!;
 
+  // Every scroller between the type and the leaf has to carry it, because a touch stops
+  // resolving at the first one. `.page-window` clips the columns, which makes it a scroll
+  // container, which makes it the last word for a finger that came down on a word.
+  const window_ = leaf.querySelector('.page-window')!;
+
   expect(getComputedStyle(leaf).touchAction).toBe('pan-y');
   expect(getComputedStyle(body).touchAction).toBe('pan-y');
+  expect(getComputedStyle(window_).touchAction).toBe('pan-y');
 });
 
 // Most of the contents is links. Refusing to turn from them would leave that page nearly

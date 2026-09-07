@@ -93,6 +93,32 @@ test('the whole page on the desk carries no transform and no clip', async () => 
   expect(getComputedStyle(paperOf(screen.container)).touchAction).toBe('none');
 });
 
+// A finger that comes down on the type has to move the paper exactly as one that comes down
+// on the margin does. It did not: `.page-window` clips the columns, so it is a scroll
+// container, and a touch resolves its touch-action only as far as *its* scroll container —
+// which meant the leaf's declaration never reached the text, and the browser was free to
+// claim any drag that began on a word. Synthetic pointers are never cancelled that way, so
+// this is asserted by computed style; the failure itself only shows on a real device.
+test('a drag that begins on the type is the reader moving the paper, not choosing words', async () => {
+  const screen = await renderAt(reviewPath(reviews[0].slug));
+  await expect.element(screen.getByRole('heading', { level: 1 })).toBeVisible();
+  await press(screen.getByRole('button', { name: 'Zoom in' }), 3);
+
+  const leaf = paperOf(screen.container);
+
+  for (const node of [
+    leaf,
+    leaf.querySelector('.leaf-page')!,
+    leaf.querySelector('.page-window')!,
+  ]) {
+    expect(getComputedStyle(node).touchAction).toBe('none');
+  }
+
+  // Asserted on the leaf, where it is declared: a child's `user-select` *computes* to `auto`
+  // even where its used value is none, so the engines disagree about what the type says.
+  expect(getComputedStyle(leaf).userSelect).toBe('none');
+});
+
 // A magnified page is read by dragging it about, so dragging must not also turn it.
 test('dragging a magnified page moves the paper and does not turn it', async () => {
   const screen = await renderAt(reviewPath(reviews[0].slug));
