@@ -203,14 +203,17 @@ export function useZoom(abort: () => void): Zoom {
     const at = pointIn(viewport, event);
     pointers.current.set(event.pointerId, at);
 
+    // A double tap is a finger's gesture. A mouse is not offered it — it has the buttons and
+    // the wheel, which are more precise instruments and less accidental ones, the same
+    // reason `useFlip` does not offer a mouse the swipe.
+    //
     // A tap that lands on a link is the reader following it, not asking for a closer look —
     // and it must not arm a double tap either, or the first tap somewhere on the page they
     // just landed on would complete a gesture they never made.
+    const finger = event.pointerType !== 'mouse';
     const onLink = (event.target as HTMLElement | null)?.closest('a, button');
 
-    if (onLink) {
-      lastTap.current = undefined;
-    } else {
+    if (finger && !onLink) {
       const tap: Tap = { at, time: event.timeStamp };
 
       if (isDoubleTap(lastTap.current, tap)) {
@@ -220,6 +223,8 @@ export function useZoom(abort: () => void): Zoom {
         return;
       }
       lastTap.current = tap;
+    } else {
+      lastTap.current = undefined;
     }
 
     if (pointers.current.size === 2) {

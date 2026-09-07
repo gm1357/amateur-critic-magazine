@@ -222,6 +222,20 @@ test('a double tap looks closer, and another gives the page back', async () => {
   await expect.poll(() => deskOf(screen.container).getAttribute('data-zoom')).toBe('fit');
 });
 
+// The gesture belongs to a finger. A mouse has the buttons and the wheel, and double
+// clicking a page is far too easy to do by accident to have it magnify the paper.
+test('a mouse double click does not zoom', async () => {
+  const screen = await renderAt(reviewPath(reviews[0].slug));
+  await expect.element(screen.getByRole('heading', { level: 1 })).toBeVisible();
+
+  // Real input, through the browser's own event synthesis, rather than pointers this suite
+  // constructed — a double click is exactly what those would fail to reproduce faithfully.
+  await userEvent.dblClick(paperOf(screen.container));
+
+  expect(deskOf(screen.container).getAttribute('data-zoom')).toBe('fit');
+  expect(scaleOf(screen.container)).toBe(1);
+});
+
 // A tap on an entry is the reader following it, not asking for a closer look at it.
 test('a double tap on a contents entry follows the entry', async () => {
   const screen = await renderAt(CONTENTS_PATH);
