@@ -155,6 +155,39 @@ test('type keeps its proportion to the page at every size', async () => {
   expect(desk.runningHead).toBeCloseTo(phone.runningHead, 3);
 });
 
+// Re-cutting the issue renumbers the reader's page under them. Correcting that in an effect
+// leaves one committed frame holding a spread counted against the old cut and read against
+// the new one — which is a different page altogether. Nobody sees it on screen, because the
+// corrected frame lands immediately after. A printer does: it lays the page out at paper
+// width, which re-cuts the issue to a single leaf, and photographs that first frame. Printing
+// any review used to hand back a different review.
+test('re-cutting the issue never puts the wrong page on the desk, even for a frame', async () => {
+  await page.viewport(DESK.width, DESK.height);
+  const opens = reviewPath(reviews[5].slug);
+  const screen = await renderAt(opens);
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: reviews[5].movie }))
+    .toBeVisible();
+
+  // Every state the desk passes through, not every state a poll happens to catch.
+  const seen: string[][] = [openAt(screen.container)];
+  const watch = new MutationObserver(() => seen.push(openAt(screen.container)));
+  watch.observe(screen.container, {
+    attributeFilter: ['data-page'],
+    attributes: true,
+    childList: true,
+    subtree: true,
+  });
+
+  // Narrow enough to read one leaf at a time: the same pages, cut into different spreads.
+  await page.viewport(430, 900);
+  await expect.poll(() => openAt(screen.container)).toEqual([opens]);
+  watch.disconnect();
+
+  expect(seen.length).toBeGreaterThan(1);
+  for (const open of seen) expect(open).toContain(opens);
+});
+
 test('the pager counts spreads but still prints page numbers', async () => {
   await page.viewport(DESK.width, DESK.height);
   const screen = await renderAt(CONTENTS_PATH);

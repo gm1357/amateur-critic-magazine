@@ -80,7 +80,25 @@ export function useFlip(
   const animation = useRef<Animation | undefined>(undefined);
   const gesture = useRef<Gesture | undefined>(undefined);
   const cut = `${mode}:${edition}`;
-  const displayedCut = useRef(cut);
+  const [displayedCut, setDisplayedCut] = useState(cut);
+
+  // Re-cutting the issue moves the reader's page to a different number without their having
+  // turned anything: a change of mode pairs the leaves up differently, and a re-typesetting
+  // gives an article that ran over the pages it needs. Either way nothing turned — the same
+  // page is simply somewhere else in the book — so the leaf is moved rather than flown.
+  //
+  // Adjusted here, during the render, and not in an effect. An effect runs after the browser
+  // has painted, so there would be one frame holding a spread number counted against the old
+  // cut and read against the new one — which is a different page. On screen nobody sees it,
+  // because the corrected frame lands immediately after. A printer does: it lays the page out
+  // at paper width, which re-cuts the issue to a single leaf, and photographs that first
+  // frame. Printing any review used to hand back a different one.
+  if (target !== undefined && phase !== 'drag' && displayedCut !== cut) {
+    setDisplayedCut(cut);
+    setDisplayed(target);
+    setPhase('rest');
+    setTurning(undefined);
+  }
 
   // The spread the URL was last seen pointing at. A drag navigates the moment the reader
   // lets go, and that navigation lands one commit after the state that starts the settle —
@@ -107,6 +125,13 @@ export function useFlip(
     turned.current = onTurn;
   });
 
+  // The leaf the re-cut above took out of the air. Before the paint, so the cancelled turn
+  // is never a frame of its own; the landing is already guarded by the layout effect's
+  // cleanup, so this is only making sure nothing is left running on a detached node.
+  useLayoutEffect(() => {
+    animation.current?.cancel();
+  }, [cut]);
+
   // Deps are all primitives or state objects. A dep on anything derived — a spread, a
   // plan — would be a fresh object on every render once the compiler is not memoising,
   // which is the case in the browser tests: the magazine would turn pages forever.
@@ -115,20 +140,6 @@ export function useFlip(
 
     const moved = target !== seenTarget.current;
     seenTarget.current = target;
-
-    // Re-cutting the issue moves the reader's page to a different number without their
-    // having turned anything: a change of mode pairs the leaves up differently, and a
-    // re-typesetting gives an article that ran over the pages it needs. Either way nothing
-    // turned — the same page is simply somewhere else in the book — so the leaf is moved
-    // rather than flown.
-    if (displayedCut.current !== cut) {
-      displayedCut.current = cut;
-      animation.current?.cancel();
-      setDisplayed(target);
-      setPhase('rest');
-      setTurning(undefined);
-      return;
-    }
 
     if (phase === 'rest') {
       if (target === displayed) return;
