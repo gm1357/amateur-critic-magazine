@@ -43,8 +43,8 @@ export default function Paginated({ children, onParts, part, silent }: Paginated
 
     count();
 
-    // The leaf is sized off the desk, so a desk that changes size re-typesets the issue —
-    // a narrower leaf holds less, exactly as a smaller sheet of paper would.
+    // A leaf that changed size is counted again. The page is a pure scale of itself, so the
+    // answer is almost always the one already on file — and reporting it costs nothing.
     const observer = new ResizeObserver(count);
     observer.observe(node);
     return () => observer.disconnect();

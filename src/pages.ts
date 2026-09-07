@@ -116,9 +116,9 @@ export function findPageNumber(list: Page[], pathname: string): number {
 }
 
 // Where a pathname was pointing before the issue was re-typeset. Re-measuring can shorten
-// an article — a wider desk fits more on a leaf — and the reader standing on its last page
-// would otherwise be holding a URL the issue no longer prints. The stem is the article,
-// and the nearest part of it is where they meant to be.
+// an article, and the reader standing on its last page would otherwise be holding a URL the
+// issue no longer prints. The stem is the article, and the nearest part of it is where they
+// meant to be.
 export function nearestPage(list: Page[], pathname: string): Page | undefined {
   const match = /^(.*)\/(\d+)$/.exec(pathname);
   if (!match) return undefined;

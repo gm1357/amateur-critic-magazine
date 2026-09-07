@@ -31,7 +31,7 @@ export default function Leaf({ onParts, page, silent }: LeafProps) {
   return (
     <div className={LEAF} data-page={page.path}>
       {chrome && (
-        <header className="border-b border-rule py-3 text-center text-xs tracking-[0.3em] text-muted uppercase">
+        <header className="border-b border-rule py-[1.5cqw] text-center text-[1.5cqw] tracking-[0.3em] text-muted uppercase">
           {MAGAZINE_TITLE}
         </header>
       )}
@@ -48,7 +48,7 @@ export default function Leaf({ onParts, page, silent }: LeafProps) {
       </div>
 
       {chrome && (
-        <p className="mt-auto pb-[3%] text-center text-xs tabular-nums text-muted">{folio}</p>
+        <p className="mt-auto pb-[3%] text-center text-[1.5cqw] tabular-nums text-muted">{folio}</p>
       )}
     </div>
   );

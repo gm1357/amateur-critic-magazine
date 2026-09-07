@@ -5,10 +5,8 @@ export default function Cover() {
   // composition whether the page is printed or shrunk onto a phone.
   return (
     <section className="flex flex-1 flex-col items-center justify-center gap-[4cqw] px-[10%] py-[8%] text-center">
-      <p className="text-[clamp(0.625rem,1.7cqw,0.875rem)] tracking-[0.2em] text-muted uppercase">
-        {ISSUE}
-      </p>
-      <h1 className="font-heading text-[clamp(2rem,11cqw,5.5rem)] leading-[0.95] tracking-[-0.03em] text-balance text-ink">
+      <p className="text-[1.7cqw] tracking-[0.2em] text-muted uppercase">{ISSUE}</p>
+      <h1 className="font-heading text-[11cqw] leading-[0.95] tracking-[-0.03em] text-balance text-ink">
         {MAGAZINE_TITLE}
       </h1>
       <p className="text-[clamp(0.625rem,1.7cqw,0.875rem)] tracking-[0.2em] text-muted uppercase">

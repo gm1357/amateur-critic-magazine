@@ -4,7 +4,7 @@ import { page } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { BACK_PATH, CONTENTS_PATH } from '../../src/pages';
+import { BACK_PATH, CONTENTS_PATH, reviewPath } from '../../src/pages';
 import { folioOf, openAt } from './issue';
 
 const A4 = 210 / 297;
@@ -118,6 +118,41 @@ test('the back cover has nothing to face, so it is alone on the left', async () 
   expect(leaves[0].getBoundingClientRect().right).toBeLessThan(
     spread.getBoundingClientRect().right,
   );
+});
+
+// A page is a pure scale of itself: everything on it is sized off the leaf, so the ratio of
+// type to paper does not move when the desk does. A fixed unit anywhere on a page — the rem
+// bounds of a clamp, a `text-xs` — shows up here as a ratio that changes with the viewport.
+test('type keeps its proportion to the page at every size', async () => {
+  const opens = reviewPath(reviews[0].slug);
+  const screen = await renderAt(opens);
+  await expect.element(screen.getByRole('heading', { level: 1 })).toBeVisible();
+
+  function proportions() {
+    const leaf = screen.container.querySelector(`[data-page="${opens}"]`)!;
+    const paper = leaf.clientWidth;
+    const sizeOf = (selector: string) =>
+      Number.parseFloat(getComputedStyle(leaf.querySelector(selector)!).fontSize) / paper;
+
+    return {
+      paper,
+      title: sizeOf('h1'),
+      body: sizeOf('article'),
+      runningHead: sizeOf('header'),
+    };
+  }
+
+  const phone = proportions();
+
+  // Wider than DESK, and tall: the leaf is capped by whichever axis runs out first, so a
+  // short desk would only be worth a third again as much paper to compare against.
+  await page.viewport(2000, 1400);
+  await expect.poll(() => proportions().paper).toBeGreaterThan(phone.paper * 1.8);
+  const desk = proportions();
+
+  expect(desk.title).toBeCloseTo(phone.title, 3);
+  expect(desk.body).toBeCloseTo(phone.body, 3);
+  expect(desk.runningHead).toBeCloseTo(phone.runningHead, 3);
 });
 
 test('the pager counts spreads but still prints page numbers', async () => {

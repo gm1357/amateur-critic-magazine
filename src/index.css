@@ -94,6 +94,13 @@
   --page-w: calc(var(--leaf-w) - var(--page-pad-x) * 2);
   --page-gap: calc(var(--leaf-w) * 0.08);
 
+  /* The size body copy is set at, and the one knob for it: every article declares this and
+     everything smaller or larger on a page — the eyebrows, the score, the dateline, the
+     drop cap, the seal — is an `em` of it. In `cqw`, so it is a proportion of the page and
+     not of the screen. The value is resolved where it is used, which is always inside a
+     leaf, so the leaf is what it is a percentage of. */
+  --page-type: 2.2cqw;
+
   &[data-mode='spread'] {
     --leaves: 2;
   }

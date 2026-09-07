@@ -18,8 +18,13 @@ export type Typeset = {
 // The issue counts its own pages. Every article that flows is laid out once off the desk,
 // at the size a leaf actually is, and reports how many leaves it fragmented into; the model
 // is rebuilt from those counts. It has to be measured rather than declared because how much
-// paper a review takes is a fact about type — the same words are two pages on a phone and
-// one on a desk, which is also why a desk that changes size sets the whole issue again.
+// paper a review takes is a fact about type on a page, and no amount of reading the JSON
+// will say how many lines it sets to.
+//
+// A page is a pure scale of itself — everything on it is sized off the leaf — so those
+// counts come out the same on a phone as on a desk. The re-measuring below is therefore a
+// safety net rather than routine work: the hairlines are the one thing on a page that does
+// not scale, and a design that grew something else absolute would need it.
 export function useTypeset(list: Article[], desk: React.RefObject<HTMLElement | null>): Typeset {
   const [parts, setParts] = useState<Record<string, number>>({});
 
@@ -31,9 +36,8 @@ export function useTypeset(list: Article[], desk: React.RefObject<HTMLElement | 
     setParts((current) => (current[path] === count ? current : { ...current, [path]: count }));
   }
 
-  // A leaf is measured off the desk, so a desk that changed size is an issue that has to be
-  // set again — a narrower page holds fewer lines, exactly as a smaller sheet would. Empty
-  // counts are what brings the composing room back.
+  // A desk that changed size is an issue worth counting again. Empty counts are what brings
+  // the composing room back.
   useEffect(() => {
     const node = desk.current;
     if (!node) return;

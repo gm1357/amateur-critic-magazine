@@ -34,10 +34,10 @@ export default function BackCover() {
   const rest = reviews.length - highlights.length;
 
   return (
-    <section className="flex flex-1 flex-col px-[9%] py-[7%] text-[clamp(0.8125rem,2cqw,1rem)]">
+    <section className="flex flex-1 flex-col px-[9%] py-[7%] text-[length:var(--page-type)]">
       <header className="flex flex-col gap-[5%]">
         <h1 className="text-[0.72em] tracking-[0.3em] text-muted uppercase">{MAGAZINE_TITLE}</h1>
-        <p className="border-t border-rule pt-[7%] font-heading text-[clamp(1.5rem,8.6cqw,4.25rem)] leading-[1.05] tracking-[-0.02em] text-pretty text-ink">
+        <p className="border-t border-rule pt-[7%] font-heading text-[8.6cqw] leading-[1.05] tracking-[-0.02em] text-pretty text-ink">
           {STRAPLINE}
         </p>
       </header>

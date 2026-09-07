@@ -45,9 +45,9 @@ export default function Magazine() {
     edition,
   );
 
-  // Re-typesetting can shorten an article — a wider desk fits more on a leaf — and a reader
-  // standing on its last page would be left holding a URL the issue no longer prints. That
-  // is not a missing page, it is the same page under a new number.
+  // Re-typesetting can shorten an article, and a reader standing on its last page would be
+  // left holding a URL the issue no longer prints. That is not a missing page, it is the
+  // same page under a new number.
   //
   // Only once the issue has been counted, though: before that every article is one leaf
   // long, and every continued page in the magazine looks like a page that does not exist.

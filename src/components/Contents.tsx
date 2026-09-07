@@ -12,12 +12,10 @@ export default function Contents() {
   const pages = useIssue();
 
   return (
-    <section className="text-[clamp(0.8125rem,2cqw,1rem)]">
+    <section className="text-[length:var(--page-type)]">
       <header className="mb-[4%] break-inside-avoid border-b border-rule pb-[3%]">
         <p className="text-[0.7em] tracking-[0.24em] text-accent uppercase">{ISSUE}</p>
-        <h1 className="mt-[1.5cqw] font-heading text-[clamp(1.5rem,6cqw,3rem)] tracking-tight text-ink">
-          Contents
-        </h1>
+        <h1 className="mt-[1.5cqw] font-heading text-[6cqw] tracking-tight text-ink">Contents</h1>
       </header>
 
       <ol>
