@@ -323,6 +323,56 @@
   cursor: grabbing;
 }
 
+/* The ribbon left in the book to find the listing again. It hangs from the bottom of the
+   left-hand leaf and stands on the book rather than on the paper, so it does not turn away
+   with the page it happens to be marking.
+
+   Measured off `--leaf-w` — the desk's one ruler, the same one the turn zones use — because
+   it is furniture of the paper: the tab is the same fraction of a page on a phone as on a
+   wall. It sits a quarter of the way across so it clears the pager's Previous link, which
+   is the only chrome the protruding end can reach. */
+@utility page-bookmark {
+  position: absolute;
+  bottom: calc(var(--leaf-w) * -0.03);
+  left: calc(var(--leaf-w) * 0.26);
+  z-index: 5;
+  width: calc(var(--leaf-w) * 0.062);
+  height: calc(var(--leaf-w) * 0.1);
+  border-radius: calc(var(--leaf-w) * 0.005);
+
+  @media print {
+    display: none;
+  }
+}
+
+/* The ribbon itself. The outer link keeps the hit area and the focus ring square, because
+   an outline would be cut away by the swallowtail clipped out of this one. */
+@utility page-bookmark-tab {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  box-shadow: 0 calc(var(--leaf-w) * 0.003) calc(var(--leaf-w) * 0.008) rgb(0 0 0 / 0.28);
+
+  /* The notch a ribbon's end is cut with. */
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
+
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+
+/* Pulled down a little when the reader reaches for it — the ribbon sliding out from
+   between the pages. */
+.page-bookmark:hover .page-bookmark-tab,
+.page-bookmark:focus-visible .page-bookmark-tab {
+  transform: translateY(calc(var(--leaf-w) * 0.032));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-bookmark-tab {
+    transition: none;
+  }
+}
+
 @utility leaf-turn {
   position: absolute;
   top: 0;
