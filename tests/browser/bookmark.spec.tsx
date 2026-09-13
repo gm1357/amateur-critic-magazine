@@ -106,67 +106,78 @@ test('reaching for the tab extends it out of the book rather than off it', async
   const tab = screen.container.querySelector('.page-bookmark-tab') as HTMLElement;
   const paper = screen.container.querySelector('[data-spread] > .a4-leaf') as HTMLElement;
 
-  // How far below the foot of the page the tab reaches, and how far its top edge has come
-  // away from that foot. The second is the whole point: it must not move.
-  const hang = () => tab.getBoundingClientRect().bottom - paper.getBoundingClientRect().bottom;
-  const lip = () =>
-    Math.abs(tab.getBoundingClientRect().top - paper.getBoundingClientRect().bottom);
+  // This is about where the tab comes to rest, not how it eases there. Chasing the last
+  // fraction of a pixel of a 180ms transition makes a test that reports on the clock, so it
+  // is turned off and every reading is the settled one.
+  const still = screen.container.ownerDocument.createElement('style');
+  still.textContent = '.page-bookmark-tab { transition: none !important }';
+  screen.container.ownerDocument.head.append(still);
 
-  // And where the words sit, which travel with the end rather than staying at the top. They
-  // are a bare text node, so they are measured with a range rather than by giving the label
-  // a box of its own to be found by.
-  const label = () => {
-    const range = document.createRange();
-    range.selectNodeContents(tab);
-    return range.getBoundingClientRect().top - paper.getBoundingClientRect().bottom;
-  };
+  try {
+    // How far below the foot of the page the tab reaches, and how far its top edge has come
+    // away from that foot. The second is the whole point: it must not move.
+    const hang = () => tab.getBoundingClientRect().bottom - paper.getBoundingClientRect().bottom;
+    const lip = () =>
+      Math.abs(tab.getBoundingClientRect().top - paper.getBoundingClientRect().bottom);
 
-  // Well away from the tab, and not in the band it hangs into.
-  const away = screen.getByRole('heading', { level: 1 });
+    // And where the words sit. They are a bare text node, so they are measured with a range
+    // rather than by giving the label a box of its own to be found by: how far down the page
+    // they have come, and how far they sit above the end of the tab. The second is the
+    // invariant — held against the end means it never changes.
+    const words = () => {
+      const range = screen.container.ownerDocument.createRange();
+      range.selectNodeContents(tab);
+      return range.getBoundingClientRect().bottom;
+    };
 
-  // Reach away until the tab has stopped moving. Repeated rather than asserted on one try:
-  // the growth is a `:hover` rule, so only a real cursor can drive it, and with both
-  // browsers running at once a single mouse move is sometimes dropped. The cursor may also
-  // be wherever the last click in this file left it, which is possibly on the tab.
-  let resting = Number.NaN;
-  await expect
-    .poll(async () => {
-      await away.hover();
-      const now = hang();
-      const stopped = now === resting;
-      resting = now;
-      return stopped;
-    }, REACHED)
-    .toBe(true);
+    const label = () => words() - paper.getBoundingClientRect().bottom;
+    const inset = () => tab.getBoundingClientRect().bottom - words();
 
-  expect(resting).toBeGreaterThan(0);
-  expect(lip()).toBeLessThan(1);
-  const printed = label();
+    // Well away from the tab, and not in the band it hangs into.
+    const away = screen.getByRole('heading', { level: 1 });
 
-  await expect
-    .poll(async () => {
-      await ribbon.hover();
-      return hang();
-    }, REACHED)
-    .toBeGreaterThan(resting);
+    // The growth is a `:hover` rule, so only a real cursor can drive it. Waiting on the
+    // state itself rather than on the geometry says whether the move has been taken up at
+    // all — and Firefox will not re-evaluate `:hover` for a move that lands on the
+    // coordinate the cursor is at already, which is why the tab is reached for first: the
+    // cursor starts wherever the last click in this file left it, possibly on the tab.
+    async function reach(target: { hover: () => Promise<void> }, onIt: boolean) {
+      await target.hover();
+      await expect.poll(() => ribbon.element().matches(':hover'), REACHED).toBe(onIt);
+    }
 
-  // Still flush with the paper: the tab got longer, it did not come loose.
-  expect(lip()).toBeLessThan(1);
+    await reach(ribbon, true);
+    await reach(away, false);
 
-  // The label came down with it — by the whole of the growth, because it is held against
-  // the end of the tab and not its top.
-  expect(label() - printed).toBeCloseTo(hang() - resting, 0);
+    const resting = hang();
+    const printed = label();
+    const seated = inset();
 
-  // And it draws back in when the hand moves away.
-  await expect
-    .poll(async () => {
-      await away.hover();
-      return hang();
-    }, REACHED)
-    .toBe(resting);
+    expect(resting).toBeGreaterThan(0);
+    expect(lip()).toBeLessThan(1);
 
-  expect(lip()).toBeLessThan(1);
-  expect(label()).toBeCloseTo(printed, 0);
+    await reach(ribbon, true);
+
+    expect(hang()).toBeGreaterThan(resting);
+
+    // Still flush with the paper: the tab got longer, it did not come loose.
+    expect(lip()).toBeLessThan(1);
+
+    // And the words came down with the end rather than staying at the top — the same
+    // distance above it as before, and further down the page than they were.
+    expect(inset()).toBeCloseTo(seated, 0);
+    expect(label()).toBeGreaterThan(printed);
+
+    // It all draws back in when the hand moves away.
+    await reach(away, false);
+
+    expect(hang()).toBeCloseTo(resting, 0);
+    expect(label()).toBeCloseTo(printed, 0);
+    expect(inset()).toBeCloseTo(seated, 0);
+    expect(lip()).toBeLessThan(1);
+  } finally {
+    still.remove();
+  }
 });
 
 // The tab belongs to the paper, so it is a pure scale of the page the way the type on it
@@ -187,6 +198,10 @@ test('the tab keeps its proportion to the page at every size', async () => {
       width: box.width / paper,
       height: box.height / paper,
       type: Number.parseFloat(getComputedStyle(tab).fontSize) / paper,
+      // The rule is its own element, and in pixels rather than as a fraction: a sub-pixel
+      // border is snapped to whole device pixels, so the ratio wobbles by more than it is
+      // worth asserting on.
+      edge: Number.parseFloat(getComputedStyle(tab, '::before').borderBottomWidth),
     };
   }
 
@@ -205,6 +220,11 @@ test('the tab keeps its proportion to the page at every size', async () => {
   const desk = proportions();
   expect(desk.width).toBeCloseTo(phone.width, 2);
   expect(desk.type).toBeCloseTo(phone.type, 3);
+
+  // The line round it grows with the paper too. Set at 1px the way the magazine's hairlines
+  // are, it would come back the same width on both desks.
+  expect(phone.edge).toBeGreaterThan(0);
+  expect(desk.edge).toBeGreaterThan(phone.edge);
 });
 
 // The band under the paper is where it hangs, and that band is `--desk-chrome` tall and
