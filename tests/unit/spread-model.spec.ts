@@ -4,7 +4,9 @@ import {
   type Article,
   buildArticles,
   buildPages,
+  CONTENTS_PATH,
   findPageIndex,
+  isPastContents,
   type Page,
   pages,
 } from '../../src/pages';
@@ -177,4 +179,51 @@ test('the model does not care how long the issue turns out to be', () => {
 
     expect(spreadCount('spread', built)).toBe(Math.ceil((built.length - 1) / 2) + 1);
   }
+});
+
+// Where the bookmark is worth printing. The listing is not somewhere to be marked a way
+// back to, and neither is the cover in front of it.
+test('nothing in front of the contents is past it', () => {
+  const built = buildPages(buildArticles(reviews), () => 1);
+
+  expect(isPastContents(built, undefined)).toBe(false);
+  expect(isPastContents(built, built[0])).toBe(false);
+  expect(isPastContents(built, built[1])).toBe(false);
+
+  expect(built[0].article.kind).toBe('cover');
+  expect(built[1].article.kind).toBe('contents');
+});
+
+// Including its own continuations: a listing that ran onto a second leaf is still the
+// listing, and the reader has not passed it until they are past all of it.
+test('a contents continued over several leaves is past none of itself', () => {
+  const built = buildPages(buildArticles(reviews), (article) =>
+    article.kind === 'contents' ? 3 : 1,
+  );
+  const listing = built.filter((page) => page.article.kind === 'contents');
+
+  expect(listing).toHaveLength(3);
+  for (const page of listing) expect(isPastContents(built, page)).toBe(false);
+
+  const after = built[findPageIndex(built, CONTENTS_PATH) + listing.length];
+  expect(isPastContents(built, after)).toBe(true);
+});
+
+// Every review, every continued leaf of one, and the blank and back cover that close the
+// issue: once the listing is behind you, the way back to it is worth printing.
+test('every leaf after the listing is past it', () => {
+  const built = buildPages(buildArticles(reviews), () => 2);
+  const listing = built.filter((page) => page.article.kind === 'contents');
+  const behind = built.slice(findPageIndex(built, CONTENTS_PATH) + listing.length);
+
+  expect(behind.length).toBeGreaterThan(0);
+  for (const page of behind) expect(isPastContents(built, page)).toBe(true);
+});
+
+// A pathname the issue does not print is not a page of it, so it is not past anything.
+test('a page from another issue is past nothing', () => {
+  const stranger: Page = { ...pages[pages.length - 1], path: '/not-a-page' };
+
+  expect(isPastContents(pages, stranger)).toBe(false);
+  expect(isPastContents([], pages[0])).toBe(false);
 });

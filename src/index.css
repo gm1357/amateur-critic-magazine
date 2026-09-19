@@ -9,6 +9,11 @@
   --muted: #6b6375;
   --rule: #e5e4e7;
   --accent: #b3282d;
+
+  /* The line round the bookmark's three open edges. Deliberately not in the swap below: it
+     is the cut edge of a piece of card lying on the desk, and it is black at both ends of
+     the theme the way `--color-curl` is. */
+  --bookmark-edge: #0b0b0d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,6 +99,13 @@
   --page-w: calc(var(--leaf-w) - var(--page-pad-x) * 2);
   --page-gap: calc(var(--leaf-w) * 0.08);
 
+  /* How far below the paper the bookmark hangs when it is fully out. A fraction of the leaf
+     like everything else that belongs to the page — and the band below keeps exactly this
+     much clear at its top, so the tab and the pager never come to share a strip. It has to
+     stay small enough that what is left of `--desk-chrome` still holds the pager: at the
+     largest leaf the issue is ever set at, this is about two thirds of the band. */
+  --bookmark-drop: calc(var(--leaf-w) * 0.049);
+
   /* The size body copy is set at, and the one knob for it: every article declares this and
      everything smaller or larger on a page — the eyebrows, the score, the dateline, the
      drop cap, the seal — is an `em` of it. In `cqw`, so it is a proportion of the page and
@@ -156,6 +168,10 @@
   height: var(--desk-chrome);
   width: calc(var(--leaf-w) * var(--leaves));
   padding-inline: 2%;
+
+  /* The strip the bookmark hangs into. The band does not grow to make room — it gives the
+     room up, and the pager centres in what is left. */
+  padding-top: var(--bookmark-drop);
 
   @media print {
     display: none;
@@ -321,6 +337,111 @@
 
 [data-phase='drag'] .turn-zone {
   cursor: grabbing;
+}
+
+/* The tab left in the book to find the listing again. It hangs from the very foot of the
+   left-hand leaf, centred on it, and stands on the book rather than on the paper — so it
+   does not turn away with the page it happens to be marking, and no part of it is printed
+   over the page's own copy.
+
+   Measured off `--leaf-w`, the desk's one ruler, like everything else that belongs to the
+   page: the tab is the same fraction of a leaf on a phone as on a wall. What it hangs into
+   is the band the pager shares, and `--bookmark-drop` is the whole of that reach — tab plus
+   pull — which `magazine-chrome` keeps clear at its top.
+
+   `left` is half a leaf either way: reading one leaf at a time that is the middle of the
+   only leaf there is, and on a wide desk it is the middle of the verso. The link takes its
+   size from the tab, so the hit area grows with it and the cursor doing the reaching is
+   never left behind. */
+@utility page-bookmark {
+  position: absolute;
+  top: 100%;
+  left: calc(var(--leaf-w) * 0.5);
+  z-index: 5;
+  transform: translateX(-50%);
+
+  @media print {
+    display: none;
+  }
+}
+
+/* The tab itself: a rectangle of the accent colour, square where it meets the paper's edge
+   and rounded off at the end hanging below it. Its resting height is two 0.015 lines of
+   type over the 0.012 the rule and its margins take up below them, on 0.002 of padding
+   above — `--bookmark-drop` less the 0.005 it has left to grow into. The band the tab hangs
+   into is a fixed height, so every one of those is spent carefully.
+
+   The label is held against the *end* of the tab rather than its top, so growing the tab
+   carries the words down with it and opens the new length above them. That is the way round
+   a bookmark actually comes out of a book: what is printed on it travels with the end, and
+   the blank part appearing is the part that was still between the pages. */
+@utility page-bookmark-tab {
+  position: relative;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  height: calc(var(--leaf-w) * 0.044);
+  padding: calc(var(--leaf-w) * 0.002) calc(var(--leaf-w) * 0.02) calc(var(--leaf-w) * 0.012);
+
+  /* The trailing letter-space hangs off the end of each centred line and pulls it left of
+     centre; the same again on the left puts it back. Padding rather than `text-indent`,
+     which would only move the first of the two lines. */
+  padding-left: calc(var(--leaf-w) * 0.02 + 0.14em);
+  border-radius: 0 0 calc(var(--leaf-w) * 0.006) calc(var(--leaf-w) * 0.006);
+  background: var(--accent);
+  color: var(--paper);
+  box-shadow: 0 calc(var(--leaf-w) * 0.002) calc(var(--leaf-w) * 0.006) rgb(0 0 0 / 0.28);
+
+  /* Well under body copy, in the same tracked capitals the rest of the magazine's small
+     type is set in — stacked a word-group to a line, the way a label is lettered on a tab.
+     Capitals have no descenders to clear, so the lines can sit solid at a line-height of 1.
+     `pre-line` takes the break from the label itself and nowhere else. */
+  font-size: calc(var(--leaf-w) * 0.015);
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: pre-line;
+
+  transition: height 180ms ease-out;
+}
+
+/* The rule inside the tab, set a small margin in from the card's own edge the way a border
+   is printed inside the trim. Three sides of it: the fourth is against the paper and runs
+   off it. Its own element rather than a `border` on the tab, which could only sit on the
+   edge itself — and anchored to the bottom, so it travels with the end as the tab grows,
+   the same way the label does.
+
+   A leaf fraction rather than the 1px the magazine's hairlines are set at, because the tab
+   is a pure scale of the page and a fixed line would be a hairline on a wall and a slab on
+   a phone. Browsers floor a border to whole pixels, so the thickness is picked to still
+   come out at two of them on the smallest leaf the issue is ever set at. */
+.page-bookmark-tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: calc(var(--leaf-w) * 0.0035);
+  bottom: calc(var(--leaf-w) * 0.0035);
+  left: calc(var(--leaf-w) * 0.0035);
+  border: 0 solid var(--bookmark-edge);
+  border-width: 0 calc(var(--leaf-w) * 0.0065) calc(var(--leaf-w) * 0.0065);
+  border-radius: 0 0 calc(var(--leaf-w) * 0.0025) calc(var(--leaf-w) * 0.0025);
+  pointer-events: none;
+}
+
+/* Reached for, the tab grows further out of the book: its top edge stays on the paper's
+   edge and only the end hanging below it moves, so it reads as the bookmark being drawn out
+   rather than as a card coming loose from the page. Extended, it is exactly the strip the
+   band kept clear for it, and the label rides down with the end. */
+.page-bookmark:hover .page-bookmark-tab,
+.page-bookmark:focus-visible .page-bookmark-tab {
+  height: var(--bookmark-drop);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-bookmark-tab {
+    transition: none;
+  }
 }
 
 @utility leaf-turn {

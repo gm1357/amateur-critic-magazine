@@ -1,6 +1,8 @@
-import type { Page } from '../pages';
+import { useIssue } from '../issue';
+import { isPastContents, type Page } from '../pages';
 import type { Mode } from '../spread';
 import type { Phase } from '../useFlip';
+import Bookmark from './Bookmark';
 import Leaf from './Leaf';
 
 function Blank() {
@@ -33,6 +35,14 @@ export default function Spread({
   ref: React.Ref<HTMLDivElement>;
   right: Page | undefined;
 }) {
+  const pages = useIssue();
+
+  // The leaf the ribbon hangs from is the left-hand one — and reading a leaf at a time
+  // there is no facing page, so the one leaf on show is the left-hand one. These are the
+  // halves standing on the desk, so during a turn the bookmark belongs to the paper that
+  // is actually under it rather than to the URL.
+  const marked = mode === 'spread' ? left : right;
+
   return (
     <div
       className="magazine-book"
@@ -48,6 +58,10 @@ export default function Spread({
       {/* Two facing pages of one article are two windows onto the same copy of it, so the
           recto is an echo: it is read aloud once, from the verso, rather than twice. */}
       {right ? <Leaf page={right} silent={continues(left, right)} /> : <Blank />}
+
+      {/* Nothing to mark a way back to until the reader is past the listing itself. */}
+      {isPastContents(pages, marked) && <Bookmark />}
+
       {children}
     </div>
   );

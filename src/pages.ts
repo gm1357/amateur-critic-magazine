@@ -130,3 +130,16 @@ export function nearestPage(list: Page[], pathname: string): Page | undefined {
   const wanted = Number(counted) - 1;
   return parts[Math.min(Math.max(wanted, 0), parts.length - 1)];
 }
+
+// Whether a page is far enough into the issue to be worth marking a way back from. The
+// listing itself is not — nor is anything in front of it, which is the cover — so the test
+// is "printed after the last leaf of the contents".
+//
+// Compared by leaf rather than by article, because a contents that ran onto a second leaf
+// is still the contents: the reader has not passed it until they are past all of it.
+export function isPastContents(list: Page[], page: Page | undefined): boolean {
+  if (!page) return false;
+
+  const contents = list.findLastIndex((entry) => entry.article.kind === 'contents');
+  return contents >= 0 && findPageIndex(list, page.path) > contents;
+}
