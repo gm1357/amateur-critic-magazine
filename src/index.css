@@ -104,7 +104,7 @@
      much clear at its top, so the tab and the pager never come to share a strip. It has to
      stay small enough that what is left of `--desk-chrome` still holds the pager: at the
      largest leaf the issue is ever set at, this is about two thirds of the band. */
-  --bookmark-drop: calc(var(--leaf-w) * 0.048);
+  --bookmark-drop: calc(var(--leaf-w) * 0.049);
 
   /* The size body copy is set at, and the one knob for it: every article declares this and
      everything smaller or larger on a page — the eyebrows, the score, the dateline, the
@@ -366,9 +366,10 @@
 }
 
 /* The tab itself: a rectangle of the accent colour, square where it meets the paper's edge
-   and rounded off at the end hanging below it. Its resting height is 0.025 of a leaf of
-   type over the 0.0135 the rule and its margins take up below it, on 0.0035 of padding
-   above — `--bookmark-drop` less the 0.006 it has left to grow into.
+   and rounded off at the end hanging below it. Its resting height is two 0.015 lines of
+   type over the 0.012 the rule and its margins take up below them, on 0.002 of padding
+   above — `--bookmark-drop` less the 0.005 it has left to grow into. The band the tab hangs
+   into is a fixed height, so every one of those is spent carefully.
 
    The label is held against the *end* of the tab rather than its top, so growing the tab
    carries the words down with it and opens the new length above them. That is the way round
@@ -378,24 +379,29 @@
   position: relative;
   display: flex;
   align-items: end;
-  height: calc(var(--leaf-w) * 0.042);
-  padding: calc(var(--leaf-w) * 0.0035) calc(var(--leaf-w) * 0.02) calc(var(--leaf-w) * 0.0135);
+  justify-content: center;
+  height: calc(var(--leaf-w) * 0.044);
+  padding: calc(var(--leaf-w) * 0.002) calc(var(--leaf-w) * 0.02) calc(var(--leaf-w) * 0.012);
+
+  /* The trailing letter-space hangs off the end of each centred line and pulls it left of
+     centre; the same again on the left puts it back. Padding rather than `text-indent`,
+     which would only move the first of the two lines. */
+  padding-left: calc(var(--leaf-w) * 0.02 + 0.14em);
   border-radius: 0 0 calc(var(--leaf-w) * 0.006) calc(var(--leaf-w) * 0.006);
   background: var(--accent);
   color: var(--paper);
   box-shadow: 0 calc(var(--leaf-w) * 0.002) calc(var(--leaf-w) * 0.006) rgb(0 0 0 / 0.28);
 
-  /* Smaller than body copy, in the same tracked capitals the rest of the magazine's small
-     type is set in. */
-  font-size: calc(var(--leaf-w) * 0.02);
+  /* Well under body copy, in the same tracked capitals the rest of the magazine's small
+     type is set in — stacked a word-group to a line, the way a label is lettered on a tab.
+     Capitals have no descenders to clear, so the lines can sit solid at a line-height of 1.
+     `pre-line` takes the break from the label itself and nowhere else. */
+  font-size: calc(var(--leaf-w) * 0.015);
   letter-spacing: 0.14em;
-  line-height: 1.25;
+  line-height: 1;
+  text-align: center;
   text-transform: uppercase;
-  white-space: nowrap;
-
-  /* The trailing letter-space would otherwise hang inside the right padding and read as a
-     wider margin than the left one. */
-  text-indent: 0.14em;
+  white-space: pre-line;
 
   transition: height 180ms ease-out;
 }

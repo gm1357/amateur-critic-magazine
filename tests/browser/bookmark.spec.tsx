@@ -180,6 +180,28 @@ test('reaching for the tab extends it out of the book rather than off it', async
   }
 });
 
+// Lettered a word-group to a line, but read as one phrase: the break is in the label's own
+// text, and only the eye is meant to see it.
+test('the label is stacked on two lines and still reads as one phrase', async () => {
+  const screen = await renderAt(BACK_PATH);
+  const ribbon = screen.getByRole('link', { name: 'Go to contents' });
+  await expect.element(ribbon).toBeVisible();
+
+  const tab = screen.container.querySelector('.page-bookmark-tab') as HTMLElement;
+  const text = tab.firstChild as Text;
+  const split = text.data.indexOf('contents');
+
+  // Where each part of the label is set, measured a character's width in from its start.
+  const topOf = (from: number) => {
+    const range = screen.container.ownerDocument.createRange();
+    range.setStart(text, from);
+    range.setEnd(text, from + 1);
+    return range.getBoundingClientRect().top;
+  };
+
+  expect(topOf(split)).toBeGreaterThan(topOf(0));
+});
+
 // The tab belongs to the paper, so it is a pure scale of the page the way the type on it
 // is: the same fraction of a leaf on a phone as on a desk. A fixed unit anywhere in it —
 // a rem of padding, a `text-xs` — shows up here as a ratio that moves with the viewport.

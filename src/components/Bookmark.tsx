@@ -14,8 +14,9 @@ export default function Bookmark() {
       {/* The label is the tab, and the tab is what moves. The link around it does not, so
           the hit area cannot slide out from under the cursor that is pulling it. It is set
           in sentence case and printed in capitals, the way the running head is, so the
-          accessible name stays a sentence. */}
-      <span className="page-bookmark-tab">Go to contents</span>
+          accessible name stays a sentence — and the line break is a newline in that same
+          text rather than a `<br>`, which some engines would read out as no space at all. */}
+      <span className="page-bookmark-tab">{'Go to\ncontents'}</span>
     </Link>
   );
 }
