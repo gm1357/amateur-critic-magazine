@@ -204,3 +204,30 @@ test('a review without a frame keeps its plain paper', async () => {
   expect(leafOf(screen.container, unframed.slug).querySelector('[data-frame]')).toBeNull();
   expect(leafOf(screen.container, unframed.slug).querySelector('.on-frame')).toBeNull();
 });
+
+// A one-line title keeps the room of a two-line one, so paging through the issue the score,
+// the rule and the first line of copy do not jump about with the length of a film's name.
+test('every masthead is two title lines deep, however long the title', async () => {
+  const byLength = [...reviews].sort((a, b) => a.movie.length - b.movie.length);
+  const depths: number[] = [];
+
+  for (const entry of [byLength[0], byLength.at(-1)!]) {
+    const screen = await render(
+      <MemoryRouter initialEntries={[`/reviews/${entry.slug}`]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    await expect.element(heading).toHaveTextContent(entry.movie);
+
+    const title = heading.element();
+    const line = Number.parseFloat(getComputedStyle(title).lineHeight);
+    expect(title.getBoundingClientRect().height).toBeCloseTo(2 * line, 0);
+
+    depths.push(title.closest('header')!.getBoundingClientRect().height);
+    await screen.unmount();
+  }
+
+  expect(Math.abs(depths[0] - depths[1])).toBeLessThanOrEqual(0.5);
+});
