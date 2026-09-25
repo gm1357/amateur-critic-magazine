@@ -2,6 +2,7 @@ import { render } from 'vitest-browser-react';
 import { expect, test } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
+import { frameOf } from '../../src/data/frames';
 import { reviews } from '../../src/data/reviews';
 import { folioOf, openAt, totalOf } from './issue';
 
@@ -10,6 +11,19 @@ import { folioOf, openAt, totalOf } from './issue';
 const review = reviews[1];
 const hearted = reviews.find((entry) => entry.hearted)!;
 const plain = reviews.find((entry) => !entry.hearted)!;
+const framed = reviews.find((entry) => frameOf(entry.slug))!;
+const unframed = reviews.find((entry) => !frameOf(entry.slug))!;
+
+// The leaf on the desk, never one being counted in the composing room.
+function leafOf(container: HTMLElement, slug: string): HTMLElement {
+  return container.querySelector(`[data-spread] [data-page="/reviews/${slug}"]`)!;
+}
+
+// Relative luminance, near enough: the question is only ever "light or dark type".
+function lightness(color: string): number {
+  const [r, g, b] = color.match(/[\d.]+/g)!.map(Number);
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
 
 test('a review page shows the movie, score, dateline and body', async () => {
   const screen = await render(
@@ -132,4 +146,52 @@ test('a review that was not hearted carries no seal', async () => {
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(plain.movie);
   expect(screen.getByRole('img', { name: 'Seal of approval' }).elements()).toHaveLength(0);
+});
+
+// Full bleed: from the top of the paper, over the running head, edge to edge, down to the
+// masthead's rule — and no further, so the body copy is set on plain paper.
+test('a review with a frame prints it behind the masthead, down to its rule', async () => {
+  const screen = await render(
+    <MemoryRouter initialEntries={[`/reviews/${framed.slug}`]}>
+      <App />
+    </MemoryRouter>,
+  );
+
+  await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(framed.movie);
+
+  const leaf = leafOf(screen.container, framed.slug);
+  const stills = leaf.querySelectorAll('[data-frame]');
+  expect(stills).toHaveLength(1);
+
+  const still = stills[0].getBoundingClientRect();
+  const paper = leaf.getBoundingClientRect();
+  const masthead = leaf.querySelector('article header')!.getBoundingClientRect();
+
+  expect(still.top).toBeCloseTo(paper.top + leaf.clientTop, 0);
+  expect(still.left).toBeCloseTo(paper.left + leaf.clientLeft, 0);
+  expect(still.right).toBeCloseTo(paper.left + leaf.clientLeft + leaf.clientWidth, 0);
+  expect(Math.abs(still.bottom - masthead.bottom)).toBeLessThanOrEqual(1);
+
+  // Cropped to fill rather than stretched, and kept out of the accessibility tree.
+  const image = stills[0].querySelector('img')!;
+  expect(getComputedStyle(image).objectFit).toBe('cover');
+  expect(image.getAttribute('alt')).toBe('');
+  expect(stills[0].getAttribute('aria-hidden')).toBe('true');
+
+  // The type over it is set light, whatever the theme, so it reads on the scrim.
+  const title = screen.getByRole('heading', { level: 1 }).element();
+  expect(lightness(getComputedStyle(title).color)).toBeGreaterThan(0.8);
+});
+
+test('a review without a frame keeps its plain paper', async () => {
+  const screen = await render(
+    <MemoryRouter initialEntries={[`/reviews/${unframed.slug}`]}>
+      <App />
+    </MemoryRouter>,
+  );
+
+  await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(unframed.movie);
+
+  expect(leafOf(screen.container, unframed.slug).querySelector('[data-frame]')).toBeNull();
+  expect(leafOf(screen.container, unframed.slug).querySelector('.on-frame')).toBeNull();
 });

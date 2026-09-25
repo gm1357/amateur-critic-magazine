@@ -1,13 +1,19 @@
+import { frameOf } from '../data/frames';
 import { useIssue } from '../issue';
 import { MAGAZINE_TITLE } from '../magazine';
 import { findPageNumber, type Page } from '../pages';
 import PageContent from './PageContent';
+import ReviewFrame from './ReviewFrame';
 
 // Each leaf is its own sheet of paper — its own border, its own shadow, its own running
 // head and folio. That is how a magazine is actually printed, and it is what lets a leaf
 // carry its chrome with it when it turns.
+//
+// `relative isolate` is for the film still behind a review's masthead: the leaf is the box
+// it is positioned in, and the stacking context that keeps it above the paper and under
+// the type.
 export const LEAF =
-  'a4-leaf @container flex touch-pan-y flex-col overflow-hidden border border-rule bg-paper font-sans text-muted shadow-lg print:border-0 print:shadow-none';
+  'a4-leaf @container relative isolate flex touch-pan-y flex-col overflow-hidden border border-rule bg-paper font-sans text-muted shadow-lg print:border-0 print:shadow-none';
 
 // The cover and back cover are their own masthead, and a blank leaf has nothing to run a
 // head or folio over — the chrome is for the pages of the issue proper.
@@ -28,10 +34,16 @@ export default function Leaf({ onParts, page, silent }: LeafProps) {
   const folio = findPageNumber(pages, page.path);
   const chrome = CHROME_KINDS.has(page.article.kind);
 
+  // The still belongs to the masthead, and only the first page of a review has one.
+  const frame =
+    page.article.kind === 'review' && page.part === 0 ? frameOf(page.article.slug) : undefined;
+
   return (
     <div className={LEAF} data-page={page.path}>
       {chrome && (
-        <header className="border-b border-rule py-[1.5cqw] text-center text-[1.5cqw] tracking-[0.3em] text-muted uppercase">
+        <header
+          className={`${frame ? 'on-frame ' : ''}border-b border-rule py-[1.5cqw] text-center text-[1.5cqw] tracking-[0.3em] text-muted uppercase`}
+        >
           {MAGAZINE_TITLE}
         </header>
       )}
@@ -50,6 +62,8 @@ export default function Leaf({ onParts, page, silent }: LeafProps) {
       {chrome && (
         <p className="mt-auto pb-[3%] text-center text-[1.5cqw] tabular-nums text-muted">{folio}</p>
       )}
+
+      {frame && <ReviewFrame src={frame} />}
     </div>
   );
 }

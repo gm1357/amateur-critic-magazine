@@ -1,3 +1,4 @@
+import { frameOf } from '../data/frames';
 import { findReview } from '../data/reviews';
 import Dateline from './Dateline';
 import NotFound from './NotFound';
@@ -18,7 +19,12 @@ export default function ReviewPage({ slug }: { slug: string }) {
 
   return (
     <article className="text-[length:var(--page-type)]">
-      <header className="mx-auto max-w-[62ch] break-inside-avoid">
+      {/* `masthead` is where a film still printed behind this header stops, and `on-frame`
+          sets the type light so it reads over it. The leaf draws the still: this header is
+          inside the page's text box and could not reach the paper's edge. */}
+      <header
+        className={`${frameOf(review.slug) ? 'on-frame ' : ''}masthead mx-auto max-w-[62ch] break-inside-avoid`}
+      >
         <p className="text-[0.7em] tracking-[0.24em] text-accent uppercase">Review</p>
         {/* The seal is stamped in the corner of the page, so it is pinned to the outer
             margin rather than trailing the title. It stays *inside* the heading all the
