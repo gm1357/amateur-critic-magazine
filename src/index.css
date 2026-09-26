@@ -271,40 +271,28 @@
   transform: translateX(calc(var(--part, 0) * -1 * (100% + var(--page-gap))));
 }
 
-/* A review's masthead, named so the film still behind it can find where it ends. */
-@utility masthead {
-  anchor-name: --masthead;
-}
-
 /* A still from the film, printed full bleed behind the running head and the masthead. It is
    drawn by the leaf and not by the article, because the article is read through
    `.page-window`, which clips to the text box — nothing inside it can reach the paper's edge.
    How far down it runs is the one thing the leaf cannot know, since it depends on how the
-   title wraps, so it is anchored to the masthead's foot rather than measured. The leaf is
-   its containing block, which is also what scopes the anchor: a masthead only qualifies if
-   it is inside that block, so a spread, a turning leaf and the composing room never read
-   each other's.
+   title wraps, so `ReviewFrame` measures the masthead's foot and hands it over as
+   `--frame-depth`, in `cqw` of the leaf like every other length on the page. Until it has
+   been measured the still is no depth at all, rather than the whole of the paper.
 
    Behind the type, not over it: `z-index: -1` in the leaf's own stacking context paints
-   above the paper and under everything printed on it. An engine without anchor positioning
-   keeps the page as it was, and `on-frame` below stands down with it. */
+   above the paper and under everything printed on it. */
 @utility review-frame {
-  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: calc(var(--frame-depth, 0) * 1cqw);
+  z-index: -1;
+  overflow: hidden;
 
-  @supports (anchor-name: --masthead) {
-    display: block;
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: anchor(--masthead bottom);
-    left: 0;
-    z-index: -1;
-    overflow: hidden;
-
-    /* The scrim is a background, which a printer drops by default — and white type on a bare
-       photograph is not what was set. */
-    print-color-adjust: exact;
-  }
+  /* The scrim is a background, which a printer drops by default — and white type on a bare
+     photograph is not what was set. */
+  print-color-adjust: exact;
 }
 
 /* Type printed over the still. The scrim keeps the photograph dark at both ends of the theme,
@@ -312,12 +300,10 @@
    both — and on paper as well. The palette resolves at the use site through `@theme inline`,
    so redeclaring it here is all it takes. */
 @utility on-frame {
-  @supports (anchor-name: --masthead) {
-    --ink: #f3f4f6;
-    --muted: rgb(243 244 246 / 0.82);
-    --accent: #ff8a85;
-    --rule: rgb(255 255 255 / 0.4);
-  }
+  --ink: #f3f4f6;
+  --muted: rgb(243 244 246 / 0.82);
+  --accent: #ff8a85;
+  --rule: rgb(255 255 255 / 0.4);
 }
 
 /* Where the issue is typeset: out of flow, unpainted, and off the printer, but laid out —

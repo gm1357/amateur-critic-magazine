@@ -10,8 +10,8 @@ import ReviewFrame from './ReviewFrame';
 // carry its chrome with it when it turns.
 //
 // `relative isolate` is for the film still behind a review's masthead: the leaf is the box
-// it is positioned in, and the stacking context that keeps it above the paper and under
-// the type.
+// it is positioned in and measured from, and the stacking context that keeps it above the
+// paper and under the type.
 export const LEAF =
   'a4-leaf @container relative isolate flex touch-pan-y flex-col overflow-hidden border border-rule bg-paper font-sans text-muted shadow-lg print:border-0 print:shadow-none';
 

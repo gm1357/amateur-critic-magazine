@@ -1,5 +1,6 @@
 import { render } from 'vitest-browser-react';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
+import { page } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { frameOf } from '../../src/data/frames';
@@ -17,6 +18,20 @@ const unframed = reviews.find((entry) => !frameOf(entry.slug))!;
 // The leaf on the desk, never one being counted in the composing room.
 function leafOf(container: HTMLElement, slug: string): HTMLElement {
   return container.querySelector(`[data-spread] [data-page="/reviews/${slug}"]`)!;
+}
+
+// The suite's pinned viewport, handed back after a test that changes the size of the desk.
+const viewport = { width: window.innerWidth, height: window.innerHeight };
+
+afterEach(async () => {
+  await page.viewport(viewport.width, viewport.height);
+});
+
+// How far the still overshoots or falls short of the masthead's rule, as it is shown.
+function gapOf(leaf: HTMLElement): number {
+  const still = leaf.querySelector('[data-frame]')!.getBoundingClientRect();
+  const masthead = leaf.querySelector('[data-masthead]')!.getBoundingClientRect();
+  return still.bottom - masthead.bottom;
 }
 
 // Relative luminance, near enough: the question is only ever "light or dark type".
@@ -230,4 +245,48 @@ test('every masthead is two title lines deep, however long the title', async () 
   }
 
   expect(Math.abs(depths[0] - depths[1])).toBeLessThanOrEqual(0.5);
+});
+
+// The still is measured in the leaf's own layout, not off the screen: a page magnified for a
+// closer look is the same page, and its still stops at the same rule.
+test('the frame still meets the rule on a magnified page', async () => {
+  const screen = await render(
+    <MemoryRouter initialEntries={[`/reviews/${framed.slug}`]}>
+      <App />
+    </MemoryRouter>,
+  );
+
+  await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(framed.movie);
+
+  const leaf = leafOf(screen.container, framed.slug);
+  const shown = leaf.getBoundingClientRect().width;
+
+  const zoomIn = screen.getByRole('button', { name: 'Zoom in' });
+  await zoomIn.click();
+  await zoomIn.click();
+
+  await expect.poll(() => leaf.getBoundingClientRect().width).toBeGreaterThan(shown * 1.4);
+  const scale = leaf.getBoundingClientRect().width / shown;
+  expect(Math.abs(gapOf(leaf))).toBeLessThanOrEqual(scale);
+});
+
+// A leaf laid out at another size — a wider desk, or the printer — takes the still with it.
+test('the frame follows the masthead when the leaf changes size', async () => {
+  const screen = await render(
+    <MemoryRouter initialEntries={[`/reviews/${framed.slug}`]}>
+      <App />
+    </MemoryRouter>,
+  );
+
+  await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(framed.movie);
+
+  const before = leafOf(screen.container, framed.slug).clientWidth;
+  await page.viewport(viewport.width * 2, viewport.height * 2);
+  await expect
+    .poll(() => leafOf(screen.container, framed.slug)?.clientWidth)
+    .toBeGreaterThan(before);
+
+  await expect
+    .poll(() => Math.abs(gapOf(leafOf(screen.container, framed.slug))))
+    .toBeLessThanOrEqual(1);
 });
