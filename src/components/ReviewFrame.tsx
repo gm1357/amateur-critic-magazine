@@ -58,7 +58,7 @@ export default function ReviewFrame({ src }: { src: string }) {
   return (
     <div aria-hidden="true" className="review-frame" data-frame ref={frame}>
       <img alt="" className="absolute inset-0 size-full object-cover" decoding="async" src={src} />
-      <div className="absolute inset-0 bg-linear-to-b from-black/45 to-black/80" data-scrim />
+      <div className="absolute inset-0 bg-linear-to-b from-black/25 to-black/70" data-scrim />
     </div>
   );
 }

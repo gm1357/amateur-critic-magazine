@@ -199,7 +199,8 @@ test('a review with a frame prints it behind the masthead, down to its rule', as
 
   // No direction printed is the default, top to bottom.
   expect(scrim).toMatch(/^linear-gradient\((?!to )/);
-  expect(alphas[0]).toBeCloseTo(0.45, 2);
+  expect(alphas[0]).toBeCloseTo(0.25, 2);
+  expect(alphas.at(-1)!).toBeCloseTo(0.7, 2);
   expect(alphas.at(-1)!).toBeGreaterThan(alphas[0]);
 
   // The type over it is set light, whatever the theme, so it reads on the scrim.
