@@ -64,7 +64,10 @@ test('a page let go of before halfway falls back', async () => {
   const book = bookOf(screen.container);
   const grip = centreOf(zoneOf(screen.container, 'next'));
 
-  await drag(grip, { x: grip.x - leafWidth(screen.container) * 0.2, y: grip.y });
+  // A step a frame, so how fast this drag is depends on the frame rate. Twelve steps came
+  // to a leaf a second at 60Hz — close enough to a flick that a few early frames threw
+  // the page over. Forty-eight keep it a slow placement at any rate a browser will run.
+  await drag(grip, { x: grip.x - leafWidth(screen.container) * 0.2, y: grip.y }, { steps: 48 });
 
   await expect.poll(() => book.getAttribute('data-phase')).toBe('rest');
   expect(openAt(screen.container)).toEqual([CONTENTS_PATH]);
