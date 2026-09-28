@@ -1,34 +1,24 @@
 @import 'tailwindcss';
 
-/* Palette lives in plain custom properties so `prefers-color-scheme` can swap it;
-   `@theme inline` below then resolves the utilities through these at the use site. */
+/* Palette lives in plain custom properties so print can swap it;
+   `@theme inline` below then resolves the utilities through these at the use site. The issue
+   is dark on screen whatever the reader's browser prefers — there is no light edition. */
 :root {
-  --paper: #fbfaf7;
-  --desk: #eae7e0;
-  --ink: #08060d;
-  --muted: #6b6375;
-  --rule: #e5e4e7;
-  --accent: #b3282d;
+  --paper: #141317;
+  --desk: #0a090c;
+  --ink: #f3f4f6;
+  --muted: #9ca3af;
+  --rule: #2e303a;
+  --accent: #ff7a75;
 
-  /* The line round the bookmark's three open edges. Deliberately not in the swap below: it
-     is the cut edge of a piece of card lying on the desk, and it is black at both ends of
-     the theme the way `--color-curl` is. */
+  /* The line round the bookmark's three open edges. Deliberately not in the print swap
+     below: it is the cut edge of a piece of card lying on the desk, and it is black on
+     screen and on paper alike, the way `--color-curl` is. */
   --bookmark-edge: #0b0b0d;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #141317;
-    --desk: #0a090c;
-    --ink: #f3f4f6;
-    --muted: #9ca3af;
-    --rule: #2e303a;
-    --accent: #ff7a75;
-  }
-}
-
 /* Paper is paper on a printer too — the dark palette would otherwise print as a black
-   sheet. Last one wins, so this has to sit after the dark override. */
+   sheet. Last one wins, so this has to sit after the screen palette. */
 @media print {
   :root {
     --paper: #ffffff;
@@ -52,7 +42,7 @@
 }
 
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -295,10 +285,10 @@
   print-color-adjust: exact;
 }
 
-/* Type printed over the still. The scrim keeps the photograph dark at both ends of the theme,
-   so what is set on it is light at both ends too — the way `--bookmark-edge` is black at
-   both — and on paper as well. The palette resolves at the use site through `@theme inline`,
-   so redeclaring it here is all it takes. */
+/* Type printed over the still. The scrim keeps the photograph dark on screen and on paper,
+   so what is set on it is light on both too — the way `--bookmark-edge` is black on both —
+   even though the printer swaps the rest of the palette. It resolves at the use site
+   through `@theme inline`, so redeclaring it here is all it takes. */
 @utility on-frame {
   --ink: #f3f4f6;
   --muted: rgb(243 244 246 / 0.82);
