@@ -271,6 +271,41 @@
   transform: translateX(calc(var(--part, 0) * -1 * (100% + var(--page-gap))));
 }
 
+/* A still from the film, printed full bleed behind the running head and the masthead. It is
+   drawn by the leaf and not by the article, because the article is read through
+   `.page-window`, which clips to the text box — nothing inside it can reach the paper's edge.
+   How far down it runs is the one thing the leaf cannot know, since it depends on how the
+   title wraps, so `ReviewFrame` measures the masthead's foot and hands it over as
+   `--frame-depth`, in `cqw` of the leaf like every other length on the page. Until it has
+   been measured the still is no depth at all, rather than the whole of the paper.
+
+   Behind the type, not over it: `z-index: -1` in the leaf's own stacking context paints
+   above the paper and under everything printed on it. */
+@utility review-frame {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: calc(var(--frame-depth, 0) * 1cqw);
+  z-index: -1;
+  overflow: hidden;
+
+  /* The scrim is a background, which a printer drops by default — and white type on a bare
+     photograph is not what was set. */
+  print-color-adjust: exact;
+}
+
+/* Type printed over the still. The scrim keeps the photograph dark at both ends of the theme,
+   so what is set on it is light at both ends too — the way `--bookmark-edge` is black at
+   both — and on paper as well. The palette resolves at the use site through `@theme inline`,
+   so redeclaring it here is all it takes. */
+@utility on-frame {
+  --ink: #f3f4f6;
+  --muted: rgb(243 244 246 / 0.82);
+  --accent: #ff8a85;
+  --rule: rgb(255 255 255 / 0.4);
+}
+
 /* Where the issue is typeset: out of flow, unpainted, and off the printer, but laid out —
    an article has to be a real leaf wide before it can say how many leaves it takes. */
 @utility composing-room {

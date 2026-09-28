@@ -1,3 +1,4 @@
+import { frameOf } from '../data/frames';
 import { findReview } from '../data/reviews';
 import Dateline from './Dateline';
 import NotFound from './NotFound';
@@ -18,12 +19,23 @@ export default function ReviewPage({ slug }: { slug: string }) {
 
   return (
     <article className="text-[length:var(--page-type)]">
-      <header className="mx-auto max-w-[62ch] break-inside-avoid">
+      {/* `data-masthead` is where a film still printed behind this header stops, and
+          `on-frame` sets the type light so it reads over it. The leaf draws the still: this
+          header is inside the page's text box and could not reach the paper's edge. */}
+      <header
+        className={`${frameOf(review.slug) ? 'on-frame ' : ''}mx-auto max-w-[62ch] break-inside-avoid`}
+        data-masthead
+      >
         <p className="text-[0.7em] tracking-[0.24em] text-accent uppercase">Review</p>
         {/* The seal is stamped in the corner of the page, so it is pinned to the outer
             margin rather than trailing the title. It stays *inside* the heading all the
-            same: it is sized in `em`, and the heading is the ruler it wants. */}
-        <h1 className="mt-[2.5cqw] flex items-start justify-between gap-[0.5em] font-heading text-[6cqw] tracking-tight text-ink">
+            same: it is sized in `em`, and the heading is the ruler it wants.
+
+            Two lines are reserved whatever the title, so every masthead in the issue is
+            the same depth and the score, the rule and the first line of copy sit at the
+            same height from one review to the next. `lh` is the heading's own line, so
+            the reservation scales with the page like the type in it. */}
+        <h1 className="mt-[2.5cqw] flex min-h-[2lh] items-start justify-between gap-[0.5em] font-heading text-[6cqw] tracking-tight text-ink">
           <span className="text-balance">{review.movie}</span>
           {review.hearted && <SealOfApproval />}
         </h1>
