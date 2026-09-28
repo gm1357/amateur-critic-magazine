@@ -15,7 +15,13 @@ export default defineConfig({
       viewport: { width: 414, height: 896 },
       provider: playwright(),
       // https://vitest.dev/config/browser/playwright
-      instances: [{ browser: 'chromium' }, { browser: 'firefox' }],
+      instances: [
+        { browser: 'chromium' },
+        // One file at a time. Firefox delivers input to the wrong page when several are open
+        // at once: a click from one test file lands in the middle of another's drag, and the
+        // click that file asked for never arrives. Every gesture test failed at random for it.
+        { browser: 'firefox', fileParallelism: false },
+      ],
     },
   },
 });
