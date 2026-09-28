@@ -162,3 +162,46 @@ test('the last page has nothing to turn onto', async () => {
   expect(book.getAttribute('data-spread')).toBe(spread);
   expect(turningLeafOf(screen.container)).toBeNull();
 });
+
+// On a desk that runs out of height, a leaf in the air projects well past the top and
+// bottom of the book. Let that reach the document and it grows a scrollbar mid-turn, the
+// desk narrows by the width of it, and the whole issue is typeset again under the reader.
+test('a leaf in the air never gives the page a scrollbar', async () => {
+  await page.viewport(DESK.width, DESK.height);
+  const screen = await renderAt(CONTENTS_PATH);
+  const book = bookOf(screen.container);
+  const root = document.documentElement;
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+  await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
+
+  // Bounded, so a turn that never lands fails the assertion below rather than the timeout.
+  let overflowed = false;
+  for (let frame = 0; frame < 120 && book.getAttribute('data-phase') === 'animate'; frame++) {
+    overflowed ||= root.scrollHeight > root.clientHeight || root.scrollWidth > root.clientWidth;
+    await new Promise(requestAnimationFrame);
+  }
+  expect(overflowed).toBe(false);
+});
+
+// A desk that changes size mid-turn re-cuts the issue under the leaf in the air. Whatever
+// that does to the turn, the book must still come to rest on the page the URL names —
+// taking the leaf out of the air without also putting the book down left it stranded
+// mid-turn, with the pager reading one spread and the desk showing another.
+//
+// The book is looked up afresh each time: while the issue is being counted again, a URL
+// on a continued page is not yet a page of it, and the book is put away until it is.
+test('a desk resized mid-turn still brings the leaf down', async () => {
+  await page.viewport(DESK.width, DESK.height);
+  const screen = await renderAt(CONTENTS_PATH);
+  const from = Number(bookOf(screen.container).getAttribute('data-spread'));
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+  await expect.poll(() => bookOf(screen.container).getAttribute('data-phase')).toBe('animate');
+  await page.viewport(DESK.width - 15, DESK.height);
+
+  await expect
+    .poll(() => screen.container.querySelector('[data-spread]')?.getAttribute('data-phase'))
+    .toBe('rest');
+  expect(Number(bookOf(screen.container).getAttribute('data-spread'))).toBe(from + 1);
+});
