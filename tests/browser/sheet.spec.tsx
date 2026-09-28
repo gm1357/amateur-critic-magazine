@@ -63,3 +63,26 @@ test('a review too long for the page scrolls inside it rather than stretching it
   expect(height).toBeLessThanOrEqual(window.innerHeight + 1);
   expect(sheet.scrollHeight).toBe(sheet.clientHeight);
 });
+
+// Relative luminance, near enough: the question is only ever "light or dark".
+function lightness(color: string): number {
+  const [r, g, b] = color.match(/[\d.]+/g)!.map(Number);
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
+test('the issue is printed dark whatever the reader’s browser prefers', async () => {
+  // The suite's browsers prefer a light scheme, so this is the case the palette used to follow.
+  expect(window.matchMedia('(prefers-color-scheme: light)').matches).toBe(true);
+
+  const screen = await renderAt('/contents');
+  const heading = screen.getByRole('heading', { level: 1, name: 'Contents' });
+  await expect.element(heading).toBeVisible();
+
+  const desk = screen.container.querySelector<HTMLElement>('.magazine-desk')!;
+  const sheet = desk.querySelector('[data-spread] .a4-leaf')!;
+
+  expect(getComputedStyle(document.documentElement).colorScheme).toBe('dark');
+  expect(lightness(getComputedStyle(desk).backgroundColor)).toBeLessThan(0.1);
+  expect(lightness(getComputedStyle(sheet).backgroundColor)).toBeLessThan(0.1);
+  expect(lightness(getComputedStyle(heading.element()).color)).toBeGreaterThan(0.9);
+});

@@ -207,7 +207,7 @@ test('a review with a frame prints it behind the masthead, down to its rule', as
   expect(alphas.at(-1)!).toBeCloseTo(0.7, 2);
   expect(alphas.at(-1)!).toBeGreaterThan(alphas[0]);
 
-  // The type over it is set light, whatever the theme, so it reads on the scrim.
+  // The type over it is set light, on screen and on paper, so it reads on the scrim.
   const title = screen.getByRole('heading', { level: 1 }).element();
   expect(lightness(getComputedStyle(title).color)).toBeGreaterThan(0.8);
 });
