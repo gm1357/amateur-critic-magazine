@@ -3,6 +3,7 @@ import { afterEach, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
+import { curlPose, rotation, SHADE, STRIPS } from '../../src/curl';
 import { reviews } from '../../src/data/reviews';
 import { BACK_PATH, CONTENTS_PATH, reviewPath } from '../../src/pages';
 import { folioOf, openAt } from './issue';
@@ -88,11 +89,93 @@ test('the leaf follows the hand while it is held', async () => {
   );
 
   expect(book.getAttribute('data-phase')).toBe('drag');
-  // Half a leaf dragged is half a turn: ninety degrees, written straight to the node.
-  const leaf = screen.container.querySelector('.leaf-turn')! as HTMLElement;
-  expect(Number.parseFloat(leaf.style.getPropertyValue('--flip-angle'))).toBeCloseTo(-90, 0);
+  // Half a leaf dragged is half a turn, and every strip of the paper is where the curl puts
+  // it halfway over — written straight to the nodes, so it is there without a frame to wait.
+  const angles = anglesOf(screen.container.querySelector('.leaf-turn')!);
+  const expected = curlPose(0.5).strips.map((angle) => rotation('forward', angle));
+  for (const [strip, angle] of expected.entries()) expect(angles[strip]).toBeCloseTo(angle, 0);
 
   // Put the pointer down again so the gesture does not outlive the test.
+  cancel(held, grip);
+});
+
+// Paper lifted by its edge curls: the free edge is further over than the paper by the spine,
+// and every strip between them is turned a little further than the one it hangs from.
+test('a leaf held in the air curls, its free edge ahead of the spine', async () => {
+  const screen = await renderAt(CONTENTS_PATH);
+  const grip = centreOf(zoneOf(screen.container, 'next'));
+
+  const held = await drag(
+    grip,
+    { x: grip.x - leafWidth(screen.container) * 0.3, y: grip.y },
+    {
+      release: false,
+    },
+  );
+
+  const angles = anglesOf(screen.container.querySelector('.leaf-turn')!);
+  expect(angles).toHaveLength(STRIPS);
+  for (let strip = 1; strip < angles.length; strip++) {
+    // Forward is a negative rotation, so further over is more negative.
+    expect(angles[strip]).toBeLessThan(angles[strip - 1] - 1);
+  }
+
+  cancel(held, grip);
+});
+
+// A strip shows whichever side of the leaf faces the reader, and only that side. The back is
+// printed mirror-wise on the same face as the front, so that seen from behind it reads the
+// right way round.
+test('a leaf held past upright shows its front by the spine and its back at the free edge', async () => {
+  const screen = await renderAt(CONTENTS_PATH);
+  const grip = centreOf(zoneOf(screen.container, 'next'));
+
+  const held = await drag(
+    grip,
+    { x: grip.x - leafWidth(screen.container) * 0.55, y: grip.y },
+    {
+      release: false,
+    },
+  );
+
+  const shown = [...screen.container.querySelectorAll('.leaf-strip')].map((strip) => {
+    const sides = [...strip.querySelectorAll(':scope > .leaf-face > .leaf-print')].filter(
+      (print) => getComputedStyle(print).visibility === 'visible',
+    );
+    expect(sides).toHaveLength(1);
+    return sides[0].getAttribute('data-face');
+  });
+
+  expect(shown).toHaveLength(STRIPS);
+  expect(shown[0]).toBe('front');
+  expect(shown.at(-1)).toBe('back');
+
+  const back = screen.container.querySelector('.leaf-print[data-face="back"]')!;
+  expect(getComputedStyle(back).transform).toBe('matrix(-1, 0, 0, 1, 0, 0)');
+
+  cancel(held, grip);
+});
+
+// The paper darkens as it turns edge-on to the reader. Halfway over, the curl runs from 60
+// to 120 degrees, so the join at the top of it is exactly edge-on and nothing is lit flat.
+test('a leaf held in the air is shaded where it turns away from the reader', async () => {
+  const screen = await renderAt(CONTENTS_PATH);
+  const grip = centreOf(zoneOf(screen.container, 'next'));
+
+  const held = await drag(
+    grip,
+    { x: grip.x - leafWidth(screen.container) * 0.5, y: grip.y },
+    {
+      release: false,
+    },
+  );
+
+  const shades = [...screen.container.querySelectorAll('.leaf-turn [data-shade]')].map((node) =>
+    Number(getComputedStyle(node).opacity),
+  );
+  expect(Math.max(...shades)).toBeCloseTo(SHADE, 2);
+  for (const opacity of shades) expect(opacity).toBeGreaterThan(0);
+
   cancel(held, grip);
 });
 
@@ -186,7 +269,7 @@ test('a released leaf carries on from where it was let go, never from flat', asy
 
   // Stopped whatever happens: a sampler left running would keep asking the browser for a
   // frame for the rest of the suite.
-  let angles: number[];
+  let angles: number[][];
   try {
     await drag(grip, { x: grip.x - leafWidth(screen.container) * 0.7, y: grip.y });
     await expect.poll(() => book.getAttribute('data-phase')).toBe('rest');
@@ -195,32 +278,44 @@ test('a released leaf carries on from where it was let go, never from flat', asy
     watch.stop();
   }
 
-  // A forward turn only ever goes one way. Anything else is the leaf being put back.
-  expect(angles.at(-1)).toBeCloseTo(-180, 0);
-  for (const [step, angle] of angles.entries()) {
-    if (step > 0) expect(angle).toBeLessThanOrEqual(angles[step - 1] + 0.5);
+  // A forward turn only ever goes one way, every part of it. Anything else is the leaf being
+  // put back.
+  expect(angles.at(-1)).toHaveLength(STRIPS);
+  for (const angle of angles.at(-1)!) expect(angle).toBeCloseTo(-180, 0);
+  for (const [step, frame] of angles.entries()) {
+    if (step === 0) continue;
+    for (const [strip, angle] of frame.entries()) {
+      expect(angle).toBeLessThanOrEqual(angles[step - 1][strip] + 0.5);
+    }
   }
 });
 
-// The leaf's angle, read back off the composited matrix rather than off the custom
-// property, because the settle is a Web Animation and does not write that property.
-function angleOf(transform: string): number | undefined {
-  if (!transform.startsWith('matrix3d')) return transform === 'none' ? undefined : 0;
+// A strip's angle, read back off the composited matrix rather than off anything the drag
+// wrote, because the settle is a Web Animation. A strip nothing has turned yet lies flat.
+function angleOf(transform: string): number {
+  if (!transform.startsWith('matrix3d')) return 0;
   const cells = transform.slice(9, -1).split(',').map(Number);
   return (Math.atan2(-cells[2], cells[0]) * 180) / Math.PI;
 }
 
+// Where every strip of the leaf is, spine first. Each hangs from the edge of the one before,
+// so its own matrix is only how far it turns past that one, and they add up.
+function anglesOf(leaf: Element): number[] {
+  let total = 0;
+  return [...leaf.querySelectorAll('.leaf-strip')].map((strip) => {
+    total += angleOf(getComputedStyle(strip).transform);
+    return total;
+  });
+}
+
 function track(book: Element) {
-  const angles: number[] = [];
+  const angles: number[][] = [];
   let running = true;
 
   function sample() {
     if (!running) return;
     const leaf = book.querySelector('.leaf-turn');
-    if (leaf) {
-      const angle = angleOf(getComputedStyle(leaf).transform);
-      if (angle !== undefined) angles.push(angle);
-    }
+    if (leaf) angles.push(anglesOf(leaf));
     requestAnimationFrame(sample);
   }
   requestAnimationFrame(sample);

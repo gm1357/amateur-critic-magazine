@@ -3,6 +3,7 @@ import { afterEach, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
+import { PERSPECTIVE, STRIPS } from '../../src/curl';
 import { reviews } from '../../src/data/reviews';
 import { BACK_PATH, CONTENTS_PATH } from '../../src/pages';
 import { folioOf, openAt } from './issue';
@@ -57,8 +58,9 @@ test('the leaf in the air is not a second copy of the page', async () => {
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Contents' })).toBeVisible();
 });
 
-// If any grouping property reached the turning leaf, `preserve-3d` would compute to flat
-// and the turn would render as a horizontal squash instead of a rotation.
+// If any grouping property reached the turning leaf — or any strip of it, since each one
+// holds the rest of the paper hung from its edge — `preserve-3d` would compute to flat and
+// the turn would render as a horizontal squash instead of a rotation.
 test('the leaf really turns in three dimensions', async () => {
   const screen = await renderAt('/');
   const book = bookOf(screen.container);
@@ -67,11 +69,59 @@ test('the leaf really turns in three dimensions', async () => {
   await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
 
   const leaf = turningLeafOf(screen.container)!;
-  expect(getComputedStyle(leaf).transformStyle).toBe('preserve-3d');
-  expect(getComputedStyle(book).perspective).not.toBe('none');
+  const strips = [...leaf.querySelectorAll('.leaf-strip')];
+  expect(strips).toHaveLength(STRIPS);
+  for (const node of [leaf, ...strips]) {
+    expect(getComputedStyle(node).transformStyle).toBe('preserve-3d');
+  }
+  // The desk's perspective is the one the curl model works out which side of each strip the
+  // reader can see from. Were they to drift apart, strips would show the wrong side of the page.
+  const leafWidth = book.querySelector('.a4-leaf')!.getBoundingClientRect().width;
+  expect(Number.parseFloat(getComputedStyle(book).perspective)).toBeCloseTo(
+    PERSPECTIVE * leafWidth,
+    0,
+  );
 
   // A rotateY resolves to a 4x4 matrix; a flattened one collapses to matrix().
-  await expect.poll(() => getComputedStyle(leaf).transform).toMatch(/^matrix3d\(/);
+  await expect.poll(() => getComputedStyle(strips[0]).transform).toMatch(/^matrix3d\(/);
+});
+
+// Every strip of the leaf is a slot onto one whole copy of the page, so the paper in the
+// air reads as the page it was on the desk.
+test('the leaf in the air is one page, cut into strips', async () => {
+  const screen = await renderAt('/');
+  const book = bookOf(screen.container);
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+  await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
+
+  const leaf = turningLeafOf(screen.container)!;
+  const fronts = [...leaf.querySelectorAll('.leaf-print[data-face="front"] [data-page]')];
+  expect(fronts).toHaveLength(STRIPS);
+  expect(new Set(fronts.map((front) => front.getAttribute('data-page')))).toEqual(new Set(['/']));
+});
+
+// Neighbouring strips meet along a cut and never overlap it. Overlapping faces cross each
+// other once the paper bends, and Chromium draws crossing planes wrongly: the foot of every
+// strip past the first came out short, and the leaf's lower edge was a staircase.
+test('every face is exactly the strip it belongs to', async () => {
+  const screen = await renderAt('/');
+  const book = bookOf(screen.container);
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+  await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
+
+  for (const strip of turningLeafOf(screen.container)!.querySelectorAll<HTMLElement>(
+    '.leaf-strip',
+  )) {
+    const faces = strip.querySelectorAll<HTMLElement>(':scope > .leaf-face');
+    // One face, carrying both sides of the page. A second one turned over to show the back is
+    // exactly what Chromium cut short: every strip's foot stopped early once the paper stood
+    // up off the book, the one at the free edge worst of all.
+    expect(faces).toHaveLength(1);
+    expect(faces[0].offsetLeft).toBe(0);
+    expect(faces[0].offsetWidth).toBe(strip.offsetWidth);
+  }
 });
 
 test('the paper carries no transform once the leaf has come down', async () => {

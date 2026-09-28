@@ -15,18 +15,24 @@ export function prefersReducedMotion(): boolean {
   return reduced?.matches ?? false;
 }
 
-// A forward turn lifts the right-hand leaf and lays it down on the left, which is a
-// negative rotation about the spine; turning back is the same motion reversed.
-export function flipAngle(direction: Direction, progress: number): number {
-  return (direction === 'forward' ? -180 : 180) * progress;
-}
-
 // Reduced motion means the leaf lands immediately — a zero duration, not a suppressed
 // animation, so the turn still resolves and the magazine still knows it has arrived.
 // A leaf released most of the way over has less to travel, so it takes less time.
 export function turnDuration(reducedMotion: boolean, remaining: number): number {
   if (reducedMotion) return 0;
   return Math.round(Math.min(Math.max(TURN_DURATION * remaining, SHORTEST), TURN_DURATION));
+}
+
+// How a turn moves through its time. A leaf turned from rest — the pager, the arrow keys, a
+// contents entry — peels up slowly, swings over quickly and settles softly, so the curl as
+// it lifts is something the reader actually sees. A leaf that was let go of is already
+// moving, and carries on at the speed the hand gave it rather than starting again from
+// nothing.
+const LIFT = 'cubic-bezier(0.45, 0, 0.25, 1)';
+const CARRY = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
+
+export function turnEasing(progress: number): string {
+  return progress > 0 ? CARRY : LIFT;
 }
 
 // A flick: how fast the leaf has to be travelling, in leaf-widths per second, for the

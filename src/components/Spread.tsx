@@ -1,3 +1,4 @@
+import { PERSPECTIVE } from '../curl';
 import { useIssue } from '../issue';
 import { isPastContents, type Page } from '../pages';
 import type { Mode } from '../spread';
@@ -44,12 +45,15 @@ export default function Spread({
   const marked = mode === 'spread' ? left : right;
 
   return (
+    // The perspective a leaf in the air is seen in comes from the curl model, which works out
+    // from the same distance which side of each strip of it the reader can see.
     <div
       className="magazine-book"
       data-phase={phase}
       data-spread={index}
       onPointerDown={onSwipe}
       ref={ref}
+      style={{ '--perspective': PERSPECTIVE } as React.CSSProperties}
     >
       {/* One leaf at a time has no facing page at all, so the left half is not a blank
           half of a book — it does not exist. */}

@@ -3,7 +3,6 @@ import {
   dragProgress,
   FLICK,
   flickVelocity,
-  flipAngle,
   remainingTravel,
   settleTarget,
   trail,
@@ -12,30 +11,8 @@ import {
   swipeThreshold,
   TURN_DURATION,
   turnDuration,
+  turnEasing,
 } from '../../src/flip';
-
-test('a turn is half a rotation, and the two directions are mirrors', () => {
-  // A leaf at rest is at no angle at all, whichever way it is about to go.
-  expect(flipAngle('forward', 0)).toBeCloseTo(0);
-  expect(flipAngle('backward', 0)).toBeCloseTo(0);
-
-  expect(flipAngle('forward', 1)).toBe(-180);
-  expect(flipAngle('backward', 1)).toBe(180);
-
-  for (const progress of [0.1, 0.25, 0.5, 0.75, 0.9]) {
-    expect(flipAngle('forward', progress)).toBe(-flipAngle('backward', progress));
-  }
-});
-
-test('the leaf sweeps the same way throughout the turn', () => {
-  let previous = flipAngle('forward', 0);
-
-  for (let step = 1; step <= 10; step++) {
-    const angle = flipAngle('forward', step / 10);
-    expect(angle).toBeLessThan(previous);
-    previous = angle;
-  }
-});
 
 test('a leaf most of the way over has less far to fall', () => {
   expect(turnDuration(false, 1)).toBe(TURN_DURATION);
@@ -194,4 +171,22 @@ test('samples all older than the window are still measured', () => {
   ]);
 
   expect(velocity).toBeCloseTo((0.5 * 1000) / (VELOCITY_WINDOW * 3), 5);
+});
+
+// A leaf turned from rest peels up slowly before it swings over; one that was let go of is
+// already moving, and carries on at the speed the hand gave it rather than starting again.
+test('a turn from rest eases in, and a leaf let go of carries on', () => {
+  const lift = turnEasing(0);
+  const carry = turnEasing(0.4);
+
+  expect(lift).not.toBe(carry);
+  expect(turnEasing(0.9)).toBe(carry);
+
+  // Both are cubic-beziers; what tells them apart is how steeply each one starts.
+  const slopeOf = (easing: string) => {
+    const [x1, y1] = easing.match(/[\d.]+/g)!.map(Number);
+    return y1 / x1;
+  };
+  expect(slopeOf(lift)).toBeLessThan(0.5);
+  expect(slopeOf(carry)).toBeGreaterThan(1);
 });
