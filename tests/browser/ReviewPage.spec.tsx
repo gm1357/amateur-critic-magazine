@@ -1,5 +1,5 @@
 import { render } from 'vitest-browser-react';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
@@ -13,7 +13,10 @@ const review = reviews[1];
 const hearted = reviews.find((entry) => entry.hearted)!;
 const plain = reviews.find((entry) => !entry.hearted)!;
 const framed = reviews.find((entry) => frameOf(entry.slug))!;
-const unframed = reviews.find((entry) => !frameOf(entry.slug))!;
+
+// Every review in the issue may well have a still, so the plain-paper case cannot count on
+// the data to supply one. `frameOf` is spied on — the real lookup until a test says otherwise.
+vi.mock('../../src/data/frames', { spy: true });
 
 // The leaf on the desk, never one being counted in the composing room.
 function leafOf(container: HTMLElement, slug: string): HTMLElement {
@@ -25,6 +28,7 @@ const viewport = { width: window.innerWidth, height: window.innerHeight };
 
 afterEach(async () => {
   await page.viewport(viewport.width, viewport.height);
+  vi.mocked(frameOf).mockReset();
 });
 
 // How far the still overshoots or falls short of the masthead's rule, as it is shown.
@@ -209,6 +213,9 @@ test('a review with a frame prints it behind the masthead, down to its rule', as
 });
 
 test('a review without a frame keeps its plain paper', async () => {
+  const unframed = review;
+  vi.mocked(frameOf).mockReturnValue(undefined);
+
   const screen = await render(
     <MemoryRouter initialEntries={[`/reviews/${unframed.slug}`]}>
       <App />
