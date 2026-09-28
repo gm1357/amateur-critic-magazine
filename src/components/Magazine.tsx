@@ -18,8 +18,11 @@ import ZoomControls from './ZoomControls';
 
 const EDITABLE = /^(?:INPUT|TEXTAREA|SELECT)$/;
 
+// Clipped on both axes. A leaf in the air projects well past the book under perspective,
+// and nothing on the desk is ever meant to scroll the page: overflow reaching the document
+// grew it a scrollbar mid-turn, which narrowed the desk and typeset the issue again.
 const DESK =
-  'magazine-desk flex min-h-svh flex-col items-center justify-center overflow-x-clip bg-desk p-(--sheet-gutter) print:block print:p-0';
+  'magazine-desk flex min-h-svh flex-col items-center justify-center overflow-clip bg-desk p-(--sheet-gutter) print:block print:p-0';
 
 export default function Magazine() {
   const { pathname } = useLocation();

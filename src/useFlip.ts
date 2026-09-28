@@ -128,9 +128,15 @@ export function useFlip(
   // The leaf the re-cut above took out of the air. Before the paint, so the cancelled turn
   // is never a frame of its own; the landing is already guarded by the layout effect's
   // cleanup, so this is only making sure nothing is left running on a detached node.
+  //
+  // Keyed on the cut the book is *showing*, not the one it was handed, so it fires only when
+  // the re-cut above has actually put the book down. The cut can change without that: while
+  // the issue is being counted again the URL may name a page the provisional cut does not
+  // have yet, and a turn cancelled then was left in the air for good — `animate`, with
+  // nothing running to ever land it. If the count comes back the same, the turn carries on.
   useLayoutEffect(() => {
     animation.current?.cancel();
-  }, [cut]);
+  }, [displayedCut]);
 
   // Deps are all primitives or state objects. A dep on anything derived — a spread, a
   // plan — would be a fresh object on every render once the compiler is not memoising,
