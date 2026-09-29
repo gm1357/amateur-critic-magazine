@@ -117,9 +117,10 @@ function sides(front: boolean, turnover: number | undefined, side: 'front' | 'ba
 }
 
 // A settle animates every strip and every wash through the same run of poses, on the same
-// timing, so the paper moves as one sheet. Rotations interpolate exactly between the poses,
-// which is why the curl is sampled rather than worked out by the browser. The side each strip
-// shows is changed over at the moment the model says it turns edge-on.
+// timing, so the paper moves as one sheet. Every strip is the same run of turns at every pose,
+// and a turn interpolates exactly, which is why the curl is sampled rather than worked out by
+// the browser. The side each strip shows is changed over at the moment the model says it
+// turns edge-on.
 function fly(
   paper: Paper,
   frames: StripLook[][],
@@ -321,8 +322,10 @@ export function useFlip(
   useEffect(() => {
     function poseTo(progress: number, direction: Direction) {
       const leaf = turnRef.current;
+      if (!leaf) return;
+
       const eye = eyeOf(modeAt.current, direction);
-      if (leaf) draw(paperOf(leaf), stripsOf(curlPose(progress), direction, eye));
+      draw(paperOf(leaf), stripsOf(curlPose(progress), direction, eye));
     }
 
     function onMove(event: PointerEvent) {

@@ -52,11 +52,45 @@ export function curlPose(progress: number): Pose {
   };
 }
 
-// The strips hang one from the next, so each is drawn by how far it turns past the strip it
-// hangs from. Nesting them is what keeps the paper from ever opening a gap: a strip cannot
-// come away from an edge it is attached to.
+// How far each strip turns past the one before it, spine first.
 export function bends({ strips }: Pose): number[] {
   return strips.map((angle, strip) => (strip === 0 ? angle : angle - strips[strip - 1]));
+}
+
+// One step of walking out from the spine along the paper: turn by an angle, or go along the
+// way it now faces by a share of the leaf.
+export type Step = { turn: number } | { along: number };
+
+// Each strip is drawn on its own, walked out from the spine through every strip before it —
+// turn, go along that strip, turn again — to the cut it hangs from, where it takes its own
+// angle. Two neighbours walk the same steps as far as the one nearer the spine goes, so they
+// cannot disagree about where they meet, and every strip is the same run of steps at every
+// pose, so a settle between two poses interpolates with the paper shut all the way.
+export function chainOf(pose: Pose): Step[][] {
+  const edges = stripEdges();
+  const turns = bends(pose);
+
+  return turns.map((_, strip) =>
+    turns
+      .slice(0, strip + 1)
+      .flatMap((turn, before): Step[] =>
+        before < strip ? [{ turn }, { along: edges[before + 1] - edges[before] }] : [{ turn }],
+      ),
+  );
+}
+
+// A strip's walk as a transform, on an element a whole leaf wide whose origin is the spine,
+// so going along the paper is a percentage of the element's own width.
+function transformOf(steps: Step[], direction: Direction): string {
+  const outward = direction === 'forward' ? 1 : -1;
+
+  return steps
+    .map((step) =>
+      'turn' in step
+        ? `rotateY(${rotation(direction, step.turn)}deg)`
+        : `translateX(${outward * step.along * 100}%)`,
+    )
+    .join(' ');
 }
 
 // How many steps a settle is drawn in. The browser interpolates between them, and a
@@ -165,11 +199,17 @@ export type StripLook = {
 
 // What each strip is drawn with at a pose, spine first — the one thing the component needs,
 // whether a drag is writing it straight to the paper or a settle is animating through it.
+// Where each strip lies at a pose, as the transform that walks it out from the spine.
+export function transformsOf(pose: Pose, direction: Direction): string[] {
+  return chainOf(pose).map((steps) => transformOf(steps, direction));
+}
+
 export function stripsOf(pose: Pose, direction: Direction, eye: Eye): StripLook[] {
   const front = facing(pose, eye);
+  const transforms = transformsOf(pose, direction);
 
-  return bends(pose).map((bend, strip) => ({
-    transform: `rotateY(${rotation(direction, bend)}deg)`,
+  return transforms.map((transform, strip) => ({
+    transform,
     front: front[strip],
     hinge: shade(pose.joins[strip]),
     free: shade(pose.joins[strip + 1]),

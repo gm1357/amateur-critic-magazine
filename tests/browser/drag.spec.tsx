@@ -156,6 +156,61 @@ test('a leaf held past upright shows its front by the spine and its back at the 
   cancel(held, grip);
 });
 
+// Where two strips meet, each covers only part of the pixels along the cut, so whatever is
+// under the leaf shows through as a hairline — the page being turned onto, flickering past
+// every cut in a quick turn. Laid over a white page and held in the air as plain paper, the
+// leaf lets any of that light show, and none of it may.
+test('no light gets through the cuts in a leaf held in the air', async () => {
+  // Short enough to fit the headless window: a test frame taller than it is scaled down to
+  // fit, and a hairline a pixel wide is resampled into something that cannot be measured.
+  await page.viewport(400, 700);
+  const screen = await renderAt(CONTENTS_PATH);
+  const grip = centreOf(zoneOf(screen.container, 'next'));
+
+  const glare = document.createElement('style');
+  glare.textContent = `
+    .magazine-book > .a4-leaf { background: #fff !important; }
+    .magazine-book > .a4-leaf *, .leaf-turn .a4-leaf > * { visibility: hidden !important; }
+  `;
+  document.head.append(glare);
+
+  try {
+    const held = await drag(
+      grip,
+      { x: grip.x - leafWidth(screen.container) * 0.3, y: grip.y },
+      {
+        release: false,
+      },
+    );
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+
+    const pixels = await snapshot();
+    // Each strip's face runs from the cut it hangs from; the strip itself is a whole leaf wide.
+    const strips = [...screen.container.querySelectorAll('.leaf-strip > .leaf-face')].map((face) =>
+      face.getBoundingClientRect(),
+    );
+    expect(strips).toHaveLength(STRIPS);
+
+    // The middle of the page, clear of the top and bottom edges that perspective slants.
+    const top = strips[0].top + strips[0].height * 0.3;
+    const bottom = strips[0].top + strips[0].height * 0.7;
+
+    // The paper itself is dark, about 20: a column through the middle of a strip is the
+    // baseline. The white page showing through a cut came out at 70 to 90.
+    const middle = (strips[1].left + strips[1].right) / 2;
+    expect(brightest(pixels, middle, middle, top, bottom)).toBeLessThan(40);
+
+    for (const strip of strips.slice(1)) {
+      expect(brightest(pixels, strip.left - 1.5, strip.left + 1.5, top, bottom)).toBeLessThan(40);
+    }
+
+    cancel(held, grip);
+  } finally {
+    glare.remove();
+  }
+});
+
 // The paper darkens as it turns edge-on to the reader. Halfway over, the curl runs from 60
 // to 120 degrees, so the join at the top of it is exactly edge-on and nothing is lit flat.
 test('a leaf held in the air is shaded where it turns away from the reader', async () => {
@@ -290,21 +345,16 @@ test('a released leaf carries on from where it was let go, never from flat', asy
   }
 });
 
-// A strip's angle, read back off the composited matrix rather than off anything the drag
-// wrote, because the settle is a Web Animation. A strip nothing has turned yet lies flat.
-function angleOf(transform: string): number {
-  if (!transform.startsWith('matrix3d')) return 0;
-  const cells = transform.slice(9, -1).split(',').map(Number);
-  return (Math.atan2(-cells[2], cells[0]) * 180) / Math.PI;
-}
-
-// Where every strip of the leaf is, spine first. Each hangs from the edge of the one before,
-// so its own matrix is only how far it turns past that one, and they add up.
+// Where every strip of the leaf is, spine first, read back off the composited matrices rather
+// than off anything the drag wrote, because the settle is a Web Animation. Each strip is turned
+// about the spine through every strip before it, so its own matrix is where it lies. A strip
+// nothing has turned yet lies flat.
 function anglesOf(leaf: Element): number[] {
-  let total = 0;
   return [...leaf.querySelectorAll('.leaf-strip')].map((strip) => {
-    total += angleOf(getComputedStyle(strip).transform);
-    return total;
+    const transform = getComputedStyle(strip).transform;
+    if (!transform.startsWith('matrix3d')) return 0;
+    const cells = transform.slice(9, -1).split(',').map(Number);
+    return (Math.atan2(-cells[2], cells[0]) * 180) / Math.PI;
   });
 }
 
@@ -326,4 +376,27 @@ function track(book: Element) {
       running = false;
     },
   };
+}
+
+// What is actually on the screen, composited, as pixels this page can read.
+async function snapshot(): Promise<ImageData> {
+  const png = await page.screenshot({ save: false });
+  const image = await createImageBitmap(await (await fetch(`data:image/png;base64,${png}`)).blob());
+  const canvas = new OffscreenCanvas(image.width, image.height);
+  const context = canvas.getContext('2d')!;
+  context.drawImage(image, 0, 0);
+  return context.getImageData(0, 0, image.width, image.height);
+}
+
+// The brightest pixel in a box given in CSS pixels, as the largest of its three channels.
+function brightest(pixels: ImageData, left: number, right: number, top: number, bottom: number) {
+  const scale = pixels.width / window.innerWidth;
+  let most = 0;
+  for (let y = Math.floor(top * scale); y <= Math.ceil(bottom * scale); y++) {
+    for (let x = Math.floor(left * scale); x <= Math.ceil(right * scale); x++) {
+      const at = (y * pixels.width + x) * 4;
+      most = Math.max(most, pixels.data[at], pixels.data[at + 1], pixels.data[at + 2]);
+    }
+  }
+  return most;
 }

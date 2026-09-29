@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import {
   bends,
+  chainOf,
   curlFrames,
   curlPose,
   eyeOf,
@@ -157,21 +158,18 @@ test('turning forward is a negative rotation about the spine, and back a positiv
   expect(rotation('forward', 0)).toBeCloseTo(0);
 });
 
-// What the component is handed: a rotation for each strip about the edge it hangs from, and
-// the wash at either end of it — the one by its hinge and the one by its free edge — taken
-// from the joins, so neighbouring strips agree where they meet.
-test('each strip is drawn turned past the one it hangs from, shaded from its own two edges', () => {
+// What the component is handed for each strip besides where it is: the wash at either end of
+// it — the one by its hinge and the one by its free edge — taken from the joins, so
+// neighbouring strips agree where they meet.
+test('each strip is shaded from its own two edges', () => {
   const pose = curlPose(0.4);
-  const forward = stripsOf(pose, 'forward', eyeOf('spread', 'forward'));
-  const backward = stripsOf(pose, 'backward', eyeOf('spread', 'backward'));
+  const looks = stripsOf(pose, 'forward', eyeOf('spread', 'forward'));
 
-  expect(forward).toHaveLength(STRIPS);
-  for (const [strip, bend] of bends(pose).entries()) {
-    expect(forward[strip].transform).toBe(`rotateY(${-bend}deg)`);
-    expect(backward[strip].transform).toBe(`rotateY(${bend}deg)`);
-    expect(forward[strip].hinge).toBe(shade(pose.joins[strip]));
-    expect(forward[strip].free).toBe(shade(pose.joins[strip + 1]));
-    if (strip > 0) expect(forward[strip].hinge).toBe(forward[strip - 1].free);
+  expect(looks).toHaveLength(STRIPS);
+  for (const [strip, look] of looks.entries()) {
+    expect(look.hinge).toBe(shade(pose.joins[strip]));
+    expect(look.free).toBe(shade(pose.joins[strip + 1]));
+    if (strip > 0) expect(look.hinge).toBe(looks[strip - 1].free);
   }
 });
 
@@ -244,4 +242,69 @@ test('each strip is drawn with the side of the page that faces the reader', () =
   const pose = curlPose(0.5);
   const looks = stripsOf(pose, 'forward', eye);
   expect(looks.map((look) => look.front)).toEqual(facing(pose, eye));
+});
+
+type Point = [number, number];
+
+// Walks a strip's steps out from the spine, in leaf widths along the paper's resting direction
+// and up off the book, and says where the strip's hinge ends up and which way it faces.
+function walk(steps: ReturnType<typeof chainOf>[number]): { at: Point; heading: number } {
+  let heading = 0;
+  let at: Point = [0, 0];
+  for (const step of steps) {
+    if ('turn' in step) heading += step.turn;
+    else at = ahead(at, heading, step.along);
+  }
+  return { at, heading };
+}
+
+function ahead([along, above]: Point, heading: number, distance: number): Point {
+  const radians = (heading * Math.PI) / 180;
+  return [along + distance * Math.cos(radians), above + distance * Math.sin(radians)];
+}
+
+// Where each cut in the paper is, spine first and free edge last.
+function cutsAt(progress: number): Point[] {
+  const edges = stripEdges();
+  const cuts: Point[] = [[0, 0]];
+  for (const [strip, angle] of curlPose(progress).strips.entries()) {
+    cuts.push(ahead(cuts[strip], angle, edges[strip + 1] - edges[strip]));
+  }
+  return cuts;
+}
+
+// Every strip is drawn on its own, turned about the spine through every strip before it: its
+// hinge lands exactly on the cut it hangs from, and it lies at its own angle. Walked out from
+// the same steps, two neighbours cannot disagree about where they meet.
+test('each strip is walked out from the spine to the cut it hangs from', () => {
+  for (const progress of [0, 0.15, 0.4, 0.5, 0.75, 1]) {
+    const pose = curlPose(progress);
+    const cuts = cutsAt(progress);
+
+    for (const [strip, steps] of chainOf(pose).entries()) {
+      const { at, heading } = walk(steps);
+      expect(Math.hypot(at[0] - cuts[strip][0], at[1] - cuts[strip][1])).toBeLessThan(1e-9);
+      expect(heading).toBeCloseTo(pose.strips[strip], 9);
+    }
+  }
+});
+
+// Every strip is the same run of functions at every pose, which is what lets the browser
+// interpolate a settle between two poses — and between two samples every strip moves through
+// the same turns, so their hinges stay shut all the way.
+test('each strip is drawn as the same run of turns and slides at every pose', () => {
+  const eye = eyeOf('spread', 'forward');
+  const shape = (transform: string) => transform.replace(/\([^)]*\)/g, '()');
+  const early = stripsOf(curlPose(0.2), 'forward', eye);
+  const late = stripsOf(curlPose(0.8), 'forward', eye);
+
+  for (const [strip, look] of early.entries()) {
+    expect(shape(look.transform)).toBe(shape(late[strip].transform));
+  }
+
+  // Forward the paper runs right from the spine and turns the negative way; back, the mirror.
+  const forward = stripsOf(curlPose(0.3), 'forward', eye)[1].transform;
+  const backward = stripsOf(curlPose(0.3), 'backward', eyeOf('spread', 'backward'))[1].transform;
+  expect(forward).toMatch(/^rotateY\(-[\d.]+deg\) translateX\([\d.]+%\) rotateY\(-[\d.]+deg\)$/);
+  expect(backward).toMatch(/^rotateY\([\d.]+deg\) translateX\(-[\d.]+%\) rotateY\([\d.]+deg\)$/);
 });

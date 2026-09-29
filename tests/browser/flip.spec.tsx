@@ -3,7 +3,7 @@ import { afterEach, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
-import { PERSPECTIVE, STRIPS } from '../../src/curl';
+import { PERSPECTIVE, stripEdges, STRIPS } from '../../src/curl';
 import { reviews } from '../../src/data/reviews';
 import { BACK_PATH, CONTENTS_PATH } from '../../src/pages';
 import { folioOf, openAt } from './issue';
@@ -58,10 +58,13 @@ test('the leaf in the air is not a second copy of the page', async () => {
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Contents' })).toBeVisible();
 });
 
-// If any grouping property reached the turning leaf — or any strip of it, since each one
-// holds the rest of the paper hung from its edge — `preserve-3d` would compute to flat and
-// the turn would render as a horizontal squash instead of a rotation.
-test('the leaf really turns in three dimensions', async () => {
+// The leaf in the air is not one 3D scene the browser sorts by depth but its strips drawn one
+// after another, spine first, each in the leaf's own perspective. Nothing about a curl needs
+// sorting — every point of the paper is higher off the book than the ones nearer the spine,
+// so from above the book the strip drawn later is always the nearer one — and sorting is where
+// Chromium went wrong: strips that overlapped came out as a staircase, and a face turned over
+// behind another lost its foot.
+test('the leaf turns in perspective, its strips drawn spine first', async () => {
   const screen = await renderAt('/');
   const book = bookOf(screen.container);
 
@@ -69,20 +72,23 @@ test('the leaf really turns in three dimensions', async () => {
   await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
 
   const leaf = turningLeafOf(screen.container)!;
-  const strips = [...leaf.querySelectorAll('.leaf-strip')];
+  expect(getComputedStyle(leaf).transformStyle).toBe('flat');
+
+  const strips = [...leaf.children].filter((child) => child.classList.contains('leaf-strip'));
   expect(strips).toHaveLength(STRIPS);
-  for (const node of [leaf, ...strips]) {
-    expect(getComputedStyle(node).transformStyle).toBe('preserve-3d');
-  }
-  // The desk's perspective is the one the curl model works out which side of each strip the
-  // reader can see from. Were they to drift apart, strips would show the wrong side of the page.
+  expect(strips.map((strip) => strip.getAttribute('data-strip'))).toEqual(
+    Array.from({ length: STRIPS }, (_, strip) => String(strip)),
+  );
+
+  // The perspective the curl model works out which side of each strip the reader can see
+  // from. Were they to drift apart, strips would show the wrong side of the page.
   const leafWidth = book.querySelector('.a4-leaf')!.getBoundingClientRect().width;
-  expect(Number.parseFloat(getComputedStyle(book).perspective)).toBeCloseTo(
+  expect(Number.parseFloat(getComputedStyle(leaf).perspective)).toBeCloseTo(
     PERSPECTIVE * leafWidth,
     0,
   );
 
-  // A rotateY resolves to a 4x4 matrix; a flattened one collapses to matrix().
+  // A rotateY resolves to a 4x4 matrix; one that lost its third dimension collapses to matrix().
   await expect.poll(() => getComputedStyle(strips[0]).transform).toMatch(/^matrix3d\(/);
 });
 
@@ -101,26 +107,27 @@ test('the leaf in the air is one page, cut into strips', async () => {
   expect(new Set(fronts.map((front) => front.getAttribute('data-page')))).toEqual(new Set(['/']));
 });
 
-// Neighbouring strips meet along a cut and never overlap it. Overlapping faces cross each
-// other once the paper bends, and Chromium draws crossing planes wrongly: the foot of every
-// strip past the first came out short, and the leaf's lower edge was a staircase.
-test('every face is exactly the strip it belongs to', async () => {
+// Where two strips meet, each covers only part of the pixels along the cut and whatever is
+// under the leaf shows through. So each face reaches a pixel past its cut, under the strip
+// drawn after it, and the cut is covered from behind by the page itself.
+test('each strip reaches just past its cut, under the next', async () => {
   const screen = await renderAt('/');
   const book = bookOf(screen.container);
 
   await screen.getByRole('link', { name: 'Next' }).click();
   await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
 
+  const edges = stripEdges();
+  const leafWidth = book.querySelector('.a4-leaf')!.getBoundingClientRect().width;
   for (const strip of turningLeafOf(screen.container)!.querySelectorAll<HTMLElement>(
     '.leaf-strip',
   )) {
     const faces = strip.querySelectorAll<HTMLElement>(':scope > .leaf-face');
-    // One face, carrying both sides of the page. A second one turned over to show the back is
-    // exactly what Chromium cut short: every strip's foot stopped early once the paper stood
-    // up off the book, the one at the free edge worst of all.
+    const index = Number(strip.getAttribute('data-strip'));
+
+    // One face, carrying both sides of the page.
     expect(faces).toHaveLength(1);
-    expect(faces[0].offsetLeft).toBe(0);
-    expect(faces[0].offsetWidth).toBe(strip.offsetWidth);
+    expect(faces[0].offsetWidth - (edges[index + 1] - edges[index]) * leafWidth).toBeCloseTo(1, 0);
   }
 });
 

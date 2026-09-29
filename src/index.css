@@ -465,27 +465,42 @@
   }
 }
 
-/* The leaf in the air. It must never carry `overflow`, `opacity`, `filter` or `contain:
-   paint`: any grouping property forces `preserve-3d` to compute to `flat`, and the turn
-   collapses into a 2D squash. Clipping belongs on the faces, which have no 3D children of
-   their own. */
+/* The leaf in the air: its strips drawn one after another, spine first, each in this
+   perspective — see `TurnLayer` for why it is not a 3D scene the browser sorts. It exists only
+   while a leaf is turning, so at rest the paper carries no transform at all, type rasterises
+   crisply and no browser is asked to composite a page in perspective.
+
+   It must never clip: a leaf in the air projects well past its own box.
+
+   How far away the reader is, `--perspective`, comes from `PERSPECTIVE` in src/curl.ts, from
+   which the model also works out which side of each strip the reader can see. The reader
+   looks from the middle of the book, which is the spine when two leaves are open and the
+   middle of the one leaf when one is. */
 @utility leaf-turn {
   position: absolute;
   top: 0;
   bottom: 0;
   z-index: 10;
   width: var(--leaf-w);
-  transform-style: preserve-3d;
+  perspective: calc(var(--leaf-w) * var(--perspective));
+
+  /* How far each face reaches past the cut at its free edge, under the strip drawn after it.
+     Each side of a cut covers only part of the pixels along it, so without this whatever is
+     under the leaf showed through every cut as a hairline — the page being turned onto,
+     flickering past each one in a quick turn. */
+  --overlap: 1px;
 
   /* The right-hand leaf is the right-hand leaf either way. The left-hand one sits at the
      book's left half when two leaves are open, and just off the desk when one is — which
      is the same expression, because the book is that much narrower. */
   &[data-side='right'] {
     right: 0;
+    perspective-origin: calc(var(--leaf-w) * (1 - var(--leaves) / 2)) 45%;
   }
 
   &[data-side='left'] {
     left: calc(var(--leaf-w) * (var(--leaves) - 2));
+    perspective-origin: calc(var(--leaf-w) * (2 - var(--leaves) / 2)) 45%;
   }
 
   @media print {
@@ -493,57 +508,50 @@
   }
 }
 
-/* A strip of the leaf in the air, hung from the free edge of the strip before it and turning
-   about that edge — the first one about the spine. Each holds the rest of the paper hung from
-   it, so the rule the leaf keeps is every strip's rule too: never `overflow`, `opacity`,
-   `filter` or `contain: paint`, or everything hung from it flattens into its plane. */
+/* A strip of the leaf in the air: a whole leaf wide, so going along the paper is a percentage
+   of its own width, with its origin on the spine. `useFlip` turns it about the spine through
+   every strip before it until its face sits on the cut it hangs from. */
 @utility leaf-strip {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: calc(var(--leaf-w) * var(--strip-w));
-  transform-style: preserve-3d;
+  width: var(--leaf-w);
   will-change: transform;
 }
 
-[data-side='right'] .leaf-strip {
-  left: 100%;
-  transform-origin: left center;
-}
-
-[data-side='left'] .leaf-strip {
-  right: 100%;
-  transform-origin: right center;
-}
-
-/* The first strip hangs from the spine itself. */
 [data-side='right'] > .leaf-strip {
   left: 0;
+  transform-origin: left center;
 }
 
 [data-side='left'] > .leaf-strip {
   right: 0;
+  transform-origin: right center;
 }
 
-/* The strip's one face, carrying both sides of the page. The clip lives here because the
-   face has no 3D children of its own — which also flattens everything printed on it into
-   its plane, so the mirrored back below is a picture on the paper and not another plane.
-
-   Exactly the strip and not a hair more. Overlapping the faces a pixel either side of each
-   cut looks like the way to keep the page underneath from showing through as a hairline —
-   but two faces that overlap while the paper is bent are two planes that cross, and
-   Chromium draws crossing planes wrongly: the foot of every strip past the first came out
-   short, and the leaf's lower edge was a staircase. Faces that only meet never cross. */
+/* The strip's one face, carrying both sides of the page, from its hinge to just past the cut
+   at its free edge. */
 @utility leaf-face {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--leaf-w) * var(--strip-w) + var(--overlap));
   overflow: hidden;
+}
+
+[data-side='right'] .leaf-face {
+  left: 0;
+}
+
+[data-side='left'] .leaf-face {
+  right: 0;
 }
 
 /* The whole page, slid along under the strip's slot so the part showing is the part the
    strip is cut from. The back of the leaf is printed mirror-wise, so that seen from behind
    it reads the right way round, and is hidden until the strip has turned its back on the
-   reader — `useFlip` changes the two over as the strip passes edge-on. */
+   reader — `useFlip` changes the two over as the strip passes edge-on. A face on the left of
+   the spine reaches past its cut to the left, which starts it that much further in. */
 @utility leaf-print {
   position: absolute;
   top: 0;
@@ -554,6 +562,10 @@
     transform: scaleX(-1);
     visibility: hidden;
   }
+}
+
+[data-side='left'] .leaf-print {
+  left: calc(var(--overlap) - var(--leaf-w) * var(--print-at));
 }
 
 /* Paper darkens as it turns edge-on to the reader. Each face carries two washes, one fading
@@ -583,19 +595,6 @@
 [data-side='left'] [data-shade='hinge'],
 [data-side='right'] [data-shade='free'] {
   background: linear-gradient(to left, var(--color-curl), transparent);
-}
-
-/* Perspective exists only while a leaf is actually turning. At rest the paper carries no
-   transform at all, so type rasterises crisply and no browser is asked to composite a
-   scrolling page inside a 3D context.
-
-   How far away the reader is, `--perspective`, is set on the book from `PERSPECTIVE` in
-   src/curl.ts: the model works out from the same distance which side of each strip of a
-   curled leaf the reader can see. */
-[data-phase='drag'],
-[data-phase='animate'] {
-  perspective: calc(var(--leaf-w) * var(--perspective));
-  perspective-origin: 50% 45%;
 }
 
 /* No rule is needed to freeze a page while its leaf is in the air: no page scrolls. An
