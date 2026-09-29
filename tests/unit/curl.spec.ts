@@ -2,7 +2,6 @@ import { expect, test } from 'vitest';
 import {
   bends,
   chainOf,
-  curlFrames,
   curlPose,
   eyeOf,
   facing,
@@ -14,7 +13,6 @@ import {
   stripEdges,
   STRIPS,
   stripsOf,
-  turnovers,
 } from '../../src/curl';
 
 // Every tenth of a percent of a turn, ends included.
@@ -118,28 +116,6 @@ test('each strip turns the same share further than the one it hangs from', () =>
   }
 });
 
-test('a settle is drawn from where the leaf is to where it is going', () => {
-  for (const [from, to] of [
-    [0, 1],
-    [0.3, 0],
-    [0.7, 1],
-  ]) {
-    const frames = curlFrames(from, to);
-
-    expect(frames.length).toBeGreaterThan(2);
-    expect(frames[0]).toEqual(curlPose(from));
-    expect(frames.at(-1)).toEqual(curlPose(to));
-  }
-});
-
-// A zero-length settle — the reader asked for less motion, or let go right at the end — is
-// still a settle, and still has somewhere to start and somewhere to land.
-test('a settle that has nowhere to go is still two frames', () => {
-  const frames = curlFrames(1, 1);
-  expect(frames.length).toBeGreaterThanOrEqual(2);
-  expect(frames[0]).toEqual(curlPose(1));
-});
-
 test('paper facing the reader is unshaded, and darkest edge-on', () => {
   expect(shade(0)).toBeCloseTo(0, 9);
   expect(shade(180)).toBeCloseTo(0, 9);
@@ -191,49 +167,43 @@ test('a leaf shows its front before it turns and its back once it has', () => {
   }
 });
 
+// The progress at which a strip stops showing the reader its front, found by halving.
+function turnoverOf(strip: number, eye: ReturnType<typeof eyeOf>): number {
+  let low = 0;
+  let high = 1;
+  for (let halving = 0; halving < 50; halving++) {
+    const middle = (low + high) / 2;
+    if (facing(curlPose(middle), eye)[strip]) low = middle;
+    else high = middle;
+  }
+  return (low + high) / 2;
+}
+
 // Seen from above the spine, the strip hinged on the spine is edge-on exactly at 90 degrees.
 // A strip further out stands to one side of the reader, who goes on seeing its front for a
 // little after it passes upright — which is why the face shown cannot be read off the angle.
 test('a strip turns its back on the reader when it is edge-on to them, not at 90 degrees', () => {
   const eye = eyeOf('spread', 'forward');
-  const [spine] = turnovers(0, 1, eye);
-  expect(curlPose(spine!).strips[0]).toBeCloseTo(90, 3);
-
-  const outer = turnovers(0, 1, eye).at(-1)!;
-  expect(curlPose(outer).strips[STRIPS - 1]).toBeGreaterThan(90);
+  expect(curlPose(turnoverOf(0, eye)).strips[0]).toBeCloseTo(90, 6);
+  expect(curlPose(turnoverOf(STRIPS - 1, eye)).strips[STRIPS - 1]).toBeGreaterThan(90);
 });
 
-test('each strip turns over exactly once in a turn, where what it shows changes', () => {
+test('each strip turns its back on the reader once in a turn, and only once', () => {
   for (const eye of [
     eyeOf('spread', 'forward'),
     eyeOf('single', 'forward'),
     eyeOf('single', 'backward'),
   ]) {
-    for (const [strip, at] of turnovers(0, 1, eye).entries()) {
-      expect(at).toBeGreaterThan(0);
-      expect(at).toBeLessThan(1);
-      expect(facing(curlPose(at! - 1e-4), eye)[strip]).toBe(true);
-      expect(facing(curlPose(at! + 1e-4), eye)[strip]).toBe(false);
+    for (let strip = 0; strip < STRIPS; strip++) {
+      let changes = 0;
+      let before = facing(curlPose(0), eye)[strip];
+      for (const progress of GRID.slice(1)) {
+        const now = facing(curlPose(progress), eye)[strip];
+        if (now !== before) changes++;
+        before = now;
+      }
+      expect(changes).toBe(1);
     }
-  }
-});
-
-// A settle is measured from wherever the leaf was let go, and can run either way: a leaf let
-// go of short of halfway falls back and turns its face to the reader again.
-test('a settle turns over only the strips it carries past edge-on, at its own share of the way', () => {
-  const eye = eyeOf('spread', 'forward');
-  const whole = turnovers(0, 1, eye);
-
-  const late = turnovers(0.9, 1, eye);
-  expect(late.every((at) => at === undefined)).toBe(true);
-
-  const back = turnovers(0.6, 0, eye);
-  for (const [strip, at] of back.entries()) {
-    if (at === undefined) {
-      expect(facing(curlPose(0.6), eye)[strip]).toBe(true);
-      continue;
-    }
-    expect(0.6 + (0 - 0.6) * at).toBeCloseTo(whole[strip]!, 4);
   }
 });
 

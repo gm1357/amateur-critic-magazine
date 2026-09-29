@@ -64,8 +64,7 @@ export type Step = { turn: number } | { along: number };
 // Each strip is drawn on its own, walked out from the spine through every strip before it —
 // turn, go along that strip, turn again — to the cut it hangs from, where it takes its own
 // angle. Two neighbours walk the same steps as far as the one nearer the spine goes, so they
-// cannot disagree about where they meet, and every strip is the same run of steps at every
-// pose, so a settle between two poses interpolates with the paper shut all the way.
+// cannot disagree about where they meet.
 export function chainOf(pose: Pose): Step[][] {
   const edges = stripEdges();
   const turns = bends(pose);
@@ -91,16 +90,6 @@ function transformOf(steps: Step[], direction: Direction): string {
         : `translateX(${outward * step.along * 100}%)`,
     )
     .join(' ');
-}
-
-// How many steps a settle is drawn in. The browser interpolates between them, and a
-// rotation interpolates exactly, so this only has to be fine enough for the curl's own shape.
-const FRAMES = 24;
-
-export function curlFrames(from: number, to: number): Pose[] {
-  return Array.from({ length: FRAMES + 1 }, (_, frame) =>
-    curlPose(from + ((to - from) * frame) / FRAMES),
-  );
 }
 
 // Lit from where the reader is looking: paper facing them is unshaded, and it darkens as it
@@ -151,42 +140,6 @@ export function facing({ strips }: Pose, eye: Eye): boolean[] {
   });
 }
 
-// How finely a settle is searched for the moments its strips turn over, before each one is
-// pinned down exactly. Each strip turns over once in a whole turn, so this only has to be
-// fine enough not to step over one.
-const SEARCH = 240;
-
-// When, as a share of a settle from one progress to another, each strip turns its back on the
-// reader — or its front, if the leaf is falling back — or undefined if it does not in this
-// settle. The page on each strip is changed over at exactly that moment, when the strip is
-// edge-on and the change cannot be seen.
-export function turnovers(from: number, to: number, eye: Eye): (number | undefined)[] {
-  const at = (share: number) => facing(curlPose(from + (to - from) * share), eye);
-  const found: (number | undefined)[] = Array(STRIPS).fill(undefined);
-
-  let before = at(0);
-  for (let step = 1; step <= SEARCH; step++) {
-    const after = at(step / SEARCH);
-
-    for (let strip = 0; strip < STRIPS; strip++) {
-      if (found[strip] !== undefined || after[strip] === before[strip]) continue;
-
-      let low = (step - 1) / SEARCH;
-      let high = step / SEARCH;
-      for (let halving = 0; halving < 40; halving++) {
-        const middle = (low + high) / 2;
-        if (at(middle)[strip] === before[strip]) low = middle;
-        else high = middle;
-      }
-      found[strip] = (low + high) / 2;
-    }
-
-    before = after;
-  }
-
-  return found;
-}
-
 export type StripLook = {
   transform: string;
   // Whether the reader sees the front of the leaf on this strip or the back.
@@ -197,13 +150,13 @@ export type StripLook = {
   free: number;
 };
 
-// What each strip is drawn with at a pose, spine first — the one thing the component needs,
-// whether a drag is writing it straight to the paper or a settle is animating through it.
 // Where each strip lies at a pose, as the transform that walks it out from the spine.
 export function transformsOf(pose: Pose, direction: Direction): string[] {
   return chainOf(pose).map((steps) => transformOf(steps, direction));
 }
 
+// What each strip is drawn with at a pose, spine first — the one thing the component needs.
+// A drag and a settle both write it straight to the paper, a whole pose at a time.
 export function stripsOf(pose: Pose, direction: Direction, eye: Eye): StripLook[] {
   const front = facing(pose, eye);
   const transforms = transformsOf(pose, direction);

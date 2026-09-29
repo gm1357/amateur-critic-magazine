@@ -547,6 +547,45 @@
   right: 0;
 }
 
+/* Every strip shows a whole copy of the page, border and all, and one Firefox drew that border
+   along the edge of the strip's slot rather than of the page: a rule down every cut in the
+   leaf. So the copies in the air keep their side borders — they are part of the page's layout
+   — but not their colour, and the leaf draws the page's two real sides itself, below. */
+.leaf-turn .a4-leaf {
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+/* The page's own sides, drawn by the strips they belong to: the one at the spine along its
+   hinge, and the one at the free edge `--overlap` in from the end of its face, where the page
+   ends. Over the page and under the washes, as the page's border is under the light. */
+[data-edge] > .leaf-face::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 1px;
+  background: var(--rule);
+  pointer-events: none;
+}
+
+[data-side='right'] > [data-edge='spine'] > .leaf-face::before {
+  left: 0;
+}
+
+[data-side='right'] > [data-edge='free'] > .leaf-face::before {
+  right: var(--overlap);
+}
+
+[data-side='left'] > [data-edge='spine'] > .leaf-face::before {
+  right: 0;
+}
+
+[data-side='left'] > [data-edge='free'] > .leaf-face::before {
+  left: var(--overlap);
+}
+
 /* The whole page, slid along under the strip's slot so the part showing is the part the
    strip is cut from. The back of the leaf is printed mirror-wise, so that seen from behind
    it reads the right way round, and is hidden until the strip has turned its back on the

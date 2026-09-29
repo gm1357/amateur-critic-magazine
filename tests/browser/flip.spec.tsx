@@ -92,6 +92,61 @@ test('the leaf turns in perspective, its strips drawn spine first', async () => 
   await expect.poll(() => getComputedStyle(strips[0]).transform).toMatch(/^matrix3d\(/);
 });
 
+// The strips are separate layers, and separate animations are not kept in step: Firefox's
+// compositor let them drift a frame apart, and the leaf split open between two strips in the
+// middle of a turn. So a settle is one clock, and every frame the whole pose is written to
+// every strip at once — the way a drag writes it — rather than each strip running its own.
+test('a turning leaf is moved by one clock, not by an animation per strip', async () => {
+  const screen = await renderAt('/');
+  const book = bookOf(screen.container);
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+  await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
+
+  // No strip, wash or side of the page is animated on its own: the clock has no target.
+  const leaf = turningLeafOf(screen.container)!;
+  expect(leaf.getAnimations({ subtree: true })).toHaveLength(0);
+
+  // And the strips do move, frame by frame.
+  const strip = leaf.querySelector<HTMLElement>('[data-strip="7"]')!;
+  const before = strip.style.transform;
+  await expect.poll(() => strip.style.transform).not.toBe(before);
+});
+
+// Every strip shows a whole copy of the page through its slot, border and all, and one
+// Firefox drew that border along the edge of the slot rather than the page: a rule down every
+// cut in the leaf. So the copies in the air keep their side borders for their layout but not
+// their colour, and the leaf draws the page's two real sides itself, on the strip at the spine
+// and the strip at the free edge.
+test('the leaf in the air draws the side edges of its page once, not once a strip', async () => {
+  const screen = await renderAt('/');
+  const book = bookOf(screen.container);
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+  await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
+
+  const leaf = turningLeafOf(screen.container)!;
+  for (const page of leaf.querySelectorAll('.a4-leaf')) {
+    const style = getComputedStyle(page);
+    expect(style.borderLeftWidth).toBe('1px');
+    expect(style.borderLeftColor).toBe('rgba(0, 0, 0, 0)');
+    expect(style.borderRightColor).toBe('rgba(0, 0, 0, 0)');
+  }
+
+  const edges = [...leaf.querySelectorAll('.leaf-strip')].map((strip) =>
+    strip.getAttribute('data-edge'),
+  );
+  expect(edges).toEqual(['spine', ...Array(STRIPS - 2).fill(null), 'free']);
+
+  const rule = getComputedStyle(book.querySelector('.a4-leaf')!).borderLeftColor;
+  for (const edge of ['spine', 'free']) {
+    const face = leaf.querySelector(`[data-edge="${edge}"] > .leaf-face`)!;
+    const line = getComputedStyle(face, '::before');
+    expect(line.width).toBe('1px');
+    expect(line.backgroundColor).toBe(rule);
+  }
+});
+
 // Every strip of the leaf is a slot onto one whole copy of the page, so the paper in the
 // air reads as the page it was on the desk.
 test('the leaf in the air is one page, cut into strips', async () => {

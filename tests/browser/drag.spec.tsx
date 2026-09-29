@@ -211,6 +211,32 @@ test('no light gets through the cuts in a leaf held in the air', async () => {
   }
 });
 
+// The leaf in the air draws its page's side edges itself, and the moment it is taken hold of
+// it has to be the page it was: the rule down the side of the paper is still there.
+test('a leaf taken hold of keeps the rules down both sides of its page', async () => {
+  await page.viewport(400, 700);
+  const screen = await renderAt(CONTENTS_PATH);
+  const grip = centreOf(zoneOf(screen.container, 'next'));
+  const paper = screen.container.querySelector('.a4-leaf')!.getBoundingClientRect();
+
+  const held = await drag(grip, { x: grip.x - 1, y: grip.y }, { release: false, steps: 2 });
+  await new Promise(requestAnimationFrame);
+  await new Promise(requestAnimationFrame);
+
+  const pixels = await snapshot();
+  const top = paper.top + paper.height * 0.3;
+  const bottom = paper.top + paper.height * 0.7;
+  // The rule is the one colour on the page that is bluer than it is red — by 12, where the
+  // paper and the desk are by 2 or 3. At the free edge, which the grip has already lifted a
+  // hair off the pixel grid, it is shared between two columns and comes out at about 9.
+  for (const edge of [paper.left, paper.right]) {
+    const columns = [-2, -1, 0, 1].map((step) => bluest(pixels, edge + step, top, bottom));
+    expect(Math.max(...columns)).toBeGreaterThan(7);
+  }
+
+  cancel(held, grip);
+});
+
 // The paper darkens as it turns edge-on to the reader. Halfway over, the curl runs from 60
 // to 120 degrees, so the join at the top of it is exactly edge-on and nothing is lit flat.
 test('a leaf held in the air is shaded where it turns away from the reader', async () => {
@@ -397,6 +423,18 @@ function brightest(pixels: ImageData, left: number, right: number, top: number, 
       const at = (y * pixels.width + x) * 4;
       most = Math.max(most, pixels.data[at], pixels.data[at + 1], pixels.data[at + 2]);
     }
+  }
+  return most;
+}
+
+// How much bluer than red the bluest pixel in a column is, as the leaf's rule is.
+function bluest(pixels: ImageData, x: number, top: number, bottom: number) {
+  const scale = pixels.width / window.innerWidth;
+  const column = Math.floor(x * scale);
+  let most = -255;
+  for (let y = Math.floor(top * scale); y <= Math.ceil(bottom * scale); y++) {
+    const at = (y * pixels.width + column) * 4;
+    most = Math.max(most, pixels.data[at + 2] - pixels.data[at]);
   }
   return most;
 }

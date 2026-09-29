@@ -1,4 +1,4 @@
-import { curlPose, PERSPECTIVE, stripEdges, transformsOf } from '../curl';
+import { curlPose, PERSPECTIVE, stripEdges, STRIPS, transformsOf } from '../curl';
 import type { Page } from '../pages';
 import type { Turn } from '../spread';
 import Leaf, { LEAF } from './Leaf';
@@ -31,6 +31,9 @@ function Print({ page }: { page: Page | undefined }) {
 // `1 - far` in when it is on the right. The back is the front turned over the spine, which
 // mirrors it — and mirrored in place, the part of the back page behind this strip starts
 // exactly as far in. The two washes shade the strip from either end.
+//
+// The strips at either end of the paper carry its side edges, which the copies of the page
+// leave uncoloured: the one at the spine, and the one at the free edge.
 function Strip({
   flat,
   side,
@@ -49,6 +52,7 @@ function Strip({
   return (
     <div
       className="leaf-strip"
+      data-edge={strip === 0 ? 'spine' : strip === STRIPS - 1 ? 'free' : undefined}
       data-strip={strip}
       style={{ '--strip-w': far - near, transform: flat } as React.CSSProperties}
     >

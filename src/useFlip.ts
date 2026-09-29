@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { curlFrames, curlPose, eyeOf, stripsOf, turnovers } from './curl';
+import { curlPose, eyeOf, stripsOf } from './curl';
 import type { StripLook } from './curl';
 import type { Sample } from './flip';
 import {
@@ -99,54 +99,13 @@ function draw(paper: Paper, looks: StripLook[]) {
   }
 }
 
-// Which side of the page a strip shows through a settle: the one it starts with until the
-// moment it turns over, and the other one from then on. Two keyframes at the same offset are
-// a change with no interpolation between them, and the moment is exact — the strip is edge-on
-// to the reader just then, so the change cannot be seen.
-function sides(front: boolean, turnover: number | undefined, side: 'front' | 'back'): Keyframe[] {
-  const before = shown(front === (side === 'front'));
-  if (turnover === undefined) return [{ visibility: before }, { visibility: before }];
+// A settle in the air: the clock it keeps time by, and the frame it will draw next.
+type Flight = { clock: Animation; frame: number };
 
-  const after = shown(front !== (side === 'front'));
-  return [
-    { offset: 0, visibility: before },
-    { offset: turnover, visibility: before },
-    { offset: turnover, visibility: after },
-    { offset: 1, visibility: after },
-  ];
-}
-
-// A settle animates every strip and every wash through the same run of poses, on the same
-// timing, so the paper moves as one sheet. Every strip is the same run of turns at every pose,
-// and a turn interpolates exactly, which is why the curl is sampled rather than worked out by
-// the browser. The side each strip shows is changed over at the moment the model says it
-// turns edge-on.
-function fly(
-  paper: Paper,
-  frames: StripLook[][],
-  turnovers: (number | undefined)[],
-  timing: KeyframeAnimationOptions,
-): Animation[] {
-  return paper.flatMap(({ back, free, front, hinge, strip: node }, strip) => [
-    node.animate(
-      frames.map((looks) => ({ transform: looks[strip].transform })),
-      timing,
-    ),
-    hinge.animate(
-      frames.map((looks) => ({ opacity: looks[strip].hinge })),
-      timing,
-    ),
-    free.animate(
-      frames.map((looks) => ({ opacity: looks[strip].free })),
-      timing,
-    ),
-    front.animate(sides(frames[0][strip].front, turnovers[strip], 'front'), timing),
-    back.animate(sides(frames[0][strip].front, turnovers[strip], 'back'), timing),
-  ]);
-}
-
-function ground(flight: Animation[]) {
-  for (const animation of flight) animation.cancel();
+function ground(flight: Flight | undefined) {
+  if (!flight) return;
+  flight.clock.cancel();
+  cancelAnimationFrame(flight.frame);
 }
 
 // The URL is the only thing that turns a page. Every way of moving through the issue —
@@ -169,7 +128,7 @@ export function useFlip(
 
   const bookRef = useRef<HTMLDivElement | null>(null);
   const turnRef = useRef<HTMLDivElement | null>(null);
-  const flight = useRef<Animation[]>([]);
+  const flight = useRef<Flight | undefined>(undefined);
   const gesture = useRef<Gesture | undefined>(undefined);
   const cut = `${mode}:${edition}`;
   const [displayedCut, setDisplayedCut] = useState(cut);
@@ -284,27 +243,49 @@ export function useFlip(
     ground(flight.current);
 
     const landed = turning.settle === 'to';
+    const from = turning.progress;
+    const to = landed ? 1 : 0;
     const eye = eyeOf(mode, turning.direction);
-    const frames = curlFrames(turning.progress, landed ? 1 : 0).map((pose) =>
-      stripsOf(pose, turning.direction, eye),
+    const paper = paperOf(node);
+    const poseAt = (share: number) =>
+      draw(paper, stripsOf(curlPose(from + (to - from) * share), turning.direction, eye));
+
+    // One clock for the whole leaf, and the whole pose drawn from it every frame, the way a
+    // drag draws it. The strips are separate layers, and separate animations are not kept in
+    // step: given one each, Firefox's compositor let neighbours drift a frame apart and the
+    // leaf split open between them mid-turn. The clock is an animation of nothing — timing
+    // only — so it still gives a reliable `finished`, still resolves at `duration: 0` (which
+    // is how reduced motion lands the leaf at once rather than stranding the turn), still
+    // eases, and `cancel()` still interrupts it.
+    const clock = new Animation(
+      new KeyframeEffect(null, null, {
+        duration: turnDuration(prefersReducedMotion(), remainingTravel(from, turning.settle)),
+        easing: turnEasing(from),
+        fill: 'forwards',
+      }),
+      document.timeline,
     );
-    const turned = turnovers(turning.progress, landed ? 1 : 0, eye);
-    const flying = fly(paperOf(node), frames, turned, {
-      duration: turnDuration(
-        prefersReducedMotion(),
-        remainingTravel(turning.progress, turning.settle),
-      ),
-      easing: turnEasing(turning.progress),
-      // Without this the last frame is dropped before React has committed the landed
-      // spread, and the leaf snaps back for one frame on its way to arriving.
-      fill: 'forwards',
-    });
+    const flying: Flight = { clock, frame: 0 };
     flight.current = flying;
 
+    // Drawn now, before the paint, so the first frame is the one the leaf was already at.
+    poseAt(0);
+    const tick = () => {
+      poseAt(clock.effect?.getComputedTiming().progress ?? 0);
+      flying.frame = requestAnimationFrame(tick);
+    };
+    flying.frame = requestAnimationFrame(tick);
+    clock.play();
+
     let interrupted = false;
-    Promise.all(flying.map((animation) => animation.finished))
+    clock.finished
       .then(() => {
+        cancelAnimationFrame(flying.frame);
         if (interrupted) return;
+
+        // Laid down exactly, before React commits the landed spread under it, so the paper
+        // never snaps back for a frame on its way to arriving.
+        poseAt(1);
         setDisplayed(landed ? turning.to : turning.from);
         setPhase('rest');
         setTurning(undefined);
@@ -314,6 +295,7 @@ export function useFlip(
 
     return () => {
       interrupted = true;
+      cancelAnimationFrame(flying.frame);
     };
   }, [mode, phase, turning]);
 
