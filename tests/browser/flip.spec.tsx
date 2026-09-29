@@ -3,6 +3,7 @@ import { afterEach, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
+import { PERSPECTIVE, stripEdges, STRIPS } from '../../src/curl';
 import { reviews } from '../../src/data/reviews';
 import { BACK_PATH, CONTENTS_PATH } from '../../src/pages';
 import { folioOf, openAt } from './issue';
@@ -57,9 +58,13 @@ test('the leaf in the air is not a second copy of the page', async () => {
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Contents' })).toBeVisible();
 });
 
-// If any grouping property reached the turning leaf, `preserve-3d` would compute to flat
-// and the turn would render as a horizontal squash instead of a rotation.
-test('the leaf really turns in three dimensions', async () => {
+// The leaf in the air is not one 3D scene the browser sorts by depth but its strips drawn one
+// after another, spine first, each in the leaf's own perspective. Nothing about a curl needs
+// sorting — every point of the paper is higher off the book than the ones nearer the spine,
+// so from above the book the strip drawn later is always the nearer one — and sorting is where
+// Chromium went wrong: strips that overlapped came out as a staircase, and a face turned over
+// behind another lost its foot.
+test('the leaf turns in perspective, its strips drawn spine first', async () => {
   const screen = await renderAt('/');
   const book = bookOf(screen.container);
 
@@ -67,11 +72,118 @@ test('the leaf really turns in three dimensions', async () => {
   await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
 
   const leaf = turningLeafOf(screen.container)!;
-  expect(getComputedStyle(leaf).transformStyle).toBe('preserve-3d');
-  expect(getComputedStyle(book).perspective).not.toBe('none');
+  expect(getComputedStyle(leaf).transformStyle).toBe('flat');
 
-  // A rotateY resolves to a 4x4 matrix; a flattened one collapses to matrix().
-  await expect.poll(() => getComputedStyle(leaf).transform).toMatch(/^matrix3d\(/);
+  const strips = [...leaf.children].filter((child) => child.classList.contains('leaf-strip'));
+  expect(strips).toHaveLength(STRIPS);
+  expect(strips.map((strip) => strip.getAttribute('data-strip'))).toEqual(
+    Array.from({ length: STRIPS }, (_, strip) => String(strip)),
+  );
+
+  // The perspective the curl model works out which side of each strip the reader can see
+  // from. Were they to drift apart, strips would show the wrong side of the page.
+  const leafWidth = book.querySelector('.a4-leaf')!.getBoundingClientRect().width;
+  expect(Number.parseFloat(getComputedStyle(leaf).perspective)).toBeCloseTo(
+    PERSPECTIVE * leafWidth,
+    0,
+  );
+
+  // A rotateY resolves to a 4x4 matrix; one that lost its third dimension collapses to matrix().
+  await expect.poll(() => getComputedStyle(strips[0]).transform).toMatch(/^matrix3d\(/);
+});
+
+// The strips are separate layers, and separate animations are not kept in step: Firefox's
+// compositor let them drift a frame apart, and the leaf split open between two strips in the
+// middle of a turn. So a settle is one clock, and every frame the whole pose is written to
+// every strip at once — the way a drag writes it — rather than each strip running its own.
+test('a turning leaf is moved by one clock, not by an animation per strip', async () => {
+  const screen = await renderAt('/');
+  const book = bookOf(screen.container);
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+  await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
+
+  // No strip, wash or side of the page is animated on its own: the clock has no target.
+  const leaf = turningLeafOf(screen.container)!;
+  expect(leaf.getAnimations({ subtree: true })).toHaveLength(0);
+
+  // And the strips do move, frame by frame.
+  const strip = leaf.querySelector<HTMLElement>('[data-strip="7"]')!;
+  const before = strip.style.transform;
+  await expect.poll(() => strip.style.transform).not.toBe(before);
+});
+
+// Every strip shows a whole copy of the page through its slot, border and all, and one
+// Firefox drew that border along the edge of the slot rather than the page: a rule down every
+// cut in the leaf. So the copies in the air keep their side borders for their layout but not
+// their colour, and the leaf draws the page's two real sides itself, on the strip at the spine
+// and the strip at the free edge.
+test('the leaf in the air draws the side edges of its page once, not once a strip', async () => {
+  const screen = await renderAt('/');
+  const book = bookOf(screen.container);
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+  await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
+
+  const leaf = turningLeafOf(screen.container)!;
+  for (const page of leaf.querySelectorAll('.a4-leaf')) {
+    const style = getComputedStyle(page);
+    expect(style.borderLeftWidth).toBe('1px');
+    expect(style.borderLeftColor).toBe('rgba(0, 0, 0, 0)');
+    expect(style.borderRightColor).toBe('rgba(0, 0, 0, 0)');
+  }
+
+  const edges = [...leaf.querySelectorAll('.leaf-strip')].map((strip) =>
+    strip.getAttribute('data-edge'),
+  );
+  expect(edges).toEqual(['spine', ...Array(STRIPS - 2).fill(null), 'free']);
+
+  const rule = getComputedStyle(book.querySelector('.a4-leaf')!).borderLeftColor;
+  for (const edge of ['spine', 'free']) {
+    const face = leaf.querySelector(`[data-edge="${edge}"] > .leaf-face`)!;
+    const line = getComputedStyle(face, '::before');
+    expect(line.width).toBe('1px');
+    expect(line.backgroundColor).toBe(rule);
+  }
+});
+
+// Every strip of the leaf is a slot onto one whole copy of the page, so the paper in the
+// air reads as the page it was on the desk.
+test('the leaf in the air is one page, cut into strips', async () => {
+  const screen = await renderAt('/');
+  const book = bookOf(screen.container);
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+  await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
+
+  const leaf = turningLeafOf(screen.container)!;
+  const fronts = [...leaf.querySelectorAll('.leaf-print[data-face="front"] [data-page]')];
+  expect(fronts).toHaveLength(STRIPS);
+  expect(new Set(fronts.map((front) => front.getAttribute('data-page')))).toEqual(new Set(['/']));
+});
+
+// Where two strips meet, each covers only part of the pixels along the cut and whatever is
+// under the leaf shows through. So each face reaches a pixel past its cut, under the strip
+// drawn after it, and the cut is covered from behind by the page itself.
+test('each strip reaches just past its cut, under the next', async () => {
+  const screen = await renderAt('/');
+  const book = bookOf(screen.container);
+
+  await screen.getByRole('link', { name: 'Next' }).click();
+  await expect.poll(() => book.getAttribute('data-phase')).toBe('animate');
+
+  const edges = stripEdges();
+  const leafWidth = book.querySelector('.a4-leaf')!.getBoundingClientRect().width;
+  for (const strip of turningLeafOf(screen.container)!.querySelectorAll<HTMLElement>(
+    '.leaf-strip',
+  )) {
+    const faces = strip.querySelectorAll<HTMLElement>(':scope > .leaf-face');
+    const index = Number(strip.getAttribute('data-strip'));
+
+    // One face, carrying both sides of the page.
+    expect(faces).toHaveLength(1);
+    expect(faces[0].offsetWidth - (edges[index + 1] - edges[index]) * leafWidth).toBeCloseTo(1, 0);
+  }
 });
 
 test('the paper carries no transform once the leaf has come down', async () => {

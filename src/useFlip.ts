@@ -1,21 +1,21 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { curlPose, eyeOf, stripsOf } from './curl';
 import type { Sample } from './flip';
 import {
   dragProgress,
   flickVelocity,
-  flipAngle,
   prefersReducedMotion,
   remainingTravel,
+  settleProgress,
   settleTarget,
   swipeIntent,
   swipeThreshold,
   trail,
   turnDuration,
+  turnEasing,
 } from './flip';
 import type { Direction, Mode } from './spread';
 import { spreadOf } from './spread';
-
-const EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 
 export type Phase = 'rest' | 'drag' | 'animate';
 
@@ -57,6 +57,70 @@ function directionOf(from: number, to: number): Direction {
   return to > from ? 'forward' : 'backward';
 }
 
+// The paper in the air, spine first: each strip, the two sides of the page printed on its
+// face, and the washes by its hinge and by its free edge.
+type Paper = {
+  strip: HTMLElement;
+  front: HTMLElement;
+  back: HTMLElement;
+  hinge: HTMLElement;
+  free: HTMLElement;
+}[];
+
+// Looked up once for each leaf and kept for as long as the leaf is: a drag reaches for it on
+// every pointer move, and nothing in a leaf changes while it is in the air.
+const papers = new WeakMap<HTMLElement, Paper>();
+
+function paperOf(leaf: HTMLElement): Paper {
+  const found = papers.get(leaf);
+  if (found) return found;
+
+  const paper = [...leaf.querySelectorAll<HTMLElement>('.leaf-strip')].map((strip) => {
+    const on = (selector: string) =>
+      strip.querySelector<HTMLElement>(`:scope > .leaf-face > ${selector}`)!;
+
+    return {
+      strip,
+      front: on('[data-face="front"]'),
+      back: on('[data-face="back"]'),
+      hinge: on('[data-shade="hinge"]'),
+      free: on('[data-shade="free"]'),
+    };
+  });
+  papers.set(leaf, paper);
+  return paper;
+}
+
+function shown(visible: boolean): string {
+  return visible ? 'visible' : 'hidden';
+}
+
+// The one way the paper is moved, whether a drag or a settle is moving it: the whole pose at a
+// progress, written straight onto every strip in the same frame. So the two can never draw a
+// leaf differently, and holding one never re-renders the sixteen copies of a page it is cut
+// from.
+function draw(leaf: HTMLElement, progress: number, direction: Direction, mode: Mode) {
+  const looks = stripsOf(curlPose(progress), direction, eyeOf(mode, direction));
+
+  for (const [strip, { back, free, front, hinge, strip: node }] of paperOf(leaf).entries()) {
+    const look = looks[strip];
+    node.style.transform = look.transform;
+    hinge.style.opacity = String(look.hinge);
+    free.style.opacity = String(look.free);
+    front.style.visibility = shown(look.front);
+    back.style.visibility = shown(!look.front);
+  }
+}
+
+// A settle in the air: the clock it keeps time by, and the frame it will draw next.
+type Flight = { clock: Animation; frame: number };
+
+function ground(flight: Flight | undefined) {
+  if (!flight) return;
+  flight.clock.cancel();
+  cancelAnimationFrame(flight.frame);
+}
+
 // The URL is the only thing that turns a page. Every way of moving through the issue —
 // the pager, the arrow keys, a contents entry, a drag on the page edge — ends in a
 // location change, and this watches the spread under it.
@@ -77,7 +141,7 @@ export function useFlip(
 
   const bookRef = useRef<HTMLDivElement | null>(null);
   const turnRef = useRef<HTMLDivElement | null>(null);
-  const animation = useRef<Animation | undefined>(undefined);
+  const flight = useRef<Flight | undefined>(undefined);
   const gesture = useRef<Gesture | undefined>(undefined);
   const cut = `${mode}:${edition}`;
   const [displayedCut, setDisplayedCut] = useState(cut);
@@ -118,6 +182,8 @@ export function useFlip(
   displayedAt.current = displayed;
   const spreadsAt = useRef(spreads);
   spreadsAt.current = spreads;
+  const modeAt = useRef(mode);
+  modeAt.current = mode;
 
   // Held in a ref so the window listeners below can be attached once and never re-bound.
   const turned = useRef(onTurn);
@@ -135,7 +201,7 @@ export function useFlip(
   // have yet, and a turn cancelled then was left in the air for good — `animate`, with
   // nothing running to ever land it. If the count comes back the same, the turn carries on.
   useLayoutEffect(() => {
-    animation.current?.cancel();
+    ground(flight.current);
   }, [displayedCut]);
 
   // Deps are all primitives or state objects. A dep on anything derived — a spread, a
@@ -166,7 +232,7 @@ export function useFlip(
     // changes, and acting on those would restart the settle a released drag had already
     // begun, from nothing.
     if (moved && turning && target !== turning.to) {
-      animation.current?.cancel();
+      ground(flight.current);
       setDisplayed(turning.to);
       setTurning({
         from: turning.to,
@@ -187,31 +253,49 @@ export function useFlip(
     const node = turnRef.current;
     if (!node) return;
 
-    animation.current?.cancel();
+    ground(flight.current);
 
-    const landed = turning.settle === 'to';
-    const animation_ = node.animate(
-      [
-        { transform: `rotateY(${flipAngle(turning.direction, turning.progress)}deg)` },
-        { transform: `rotateY(${flipAngle(turning.direction, landed ? 1 : 0)}deg)` },
-      ],
-      {
-        duration: turnDuration(
-          prefersReducedMotion(),
-          remainingTravel(turning.progress, turning.settle),
-        ),
-        easing: EASING,
-        // Without this the last frame is dropped before React has committed the landed
-        // spread, and the leaf snaps back for one frame on its way to arriving.
+    const { direction, progress, settle } = turning;
+    const landed = settle === 'to';
+    const poseAt = (share: number) =>
+      draw(node, settleProgress(progress, settle, share), direction, mode);
+
+    // One clock for the whole leaf, and the whole pose drawn from it every frame, the way a
+    // drag draws it. The strips are separate layers, and separate animations are not kept in
+    // step: given one each, Firefox's compositor let neighbours drift a frame apart and the
+    // leaf split open between them mid-turn. The clock is an animation of nothing — timing
+    // only — so it still gives a reliable `finished`, still resolves at `duration: 0` (which
+    // is how reduced motion lands the leaf at once rather than stranding the turn), still
+    // eases, and `cancel()` still interrupts it.
+    const clock = new Animation(
+      new KeyframeEffect(null, null, {
+        duration: turnDuration(prefersReducedMotion(), remainingTravel(progress, settle)),
+        easing: turnEasing(progress),
         fill: 'forwards',
-      },
+      }),
+      document.timeline,
     );
-    animation.current = animation_;
+    const flying: Flight = { clock, frame: 0 };
+    flight.current = flying;
+
+    // Drawn now, before the paint, so the first frame is the one the leaf was already at.
+    poseAt(0);
+    const tick = () => {
+      poseAt(clock.effect?.getComputedTiming().progress ?? 0);
+      flying.frame = requestAnimationFrame(tick);
+    };
+    flying.frame = requestAnimationFrame(tick);
+    clock.play();
 
     let interrupted = false;
-    animation_.finished
+    clock.finished
       .then(() => {
+        cancelAnimationFrame(flying.frame);
         if (interrupted) return;
+
+        // Laid down exactly, before React commits the landed spread under it, so the paper
+        // never snaps back for a frame on its way to arriving.
+        poseAt(1);
         setDisplayed(landed ? turning.to : turning.from);
         setPhase('rest');
         setTurning(undefined);
@@ -221,15 +305,16 @@ export function useFlip(
 
     return () => {
       interrupted = true;
+      cancelAnimationFrame(flying.frame);
     };
-  }, [phase, turning]);
+  }, [mode, phase, turning]);
 
   // Bound once, reading the gesture out of a ref, so the listener set never churns and a
-  // drag never re-renders the four pages under it: the angle is written straight to the
-  // node as a custom property.
+  // drag never re-renders the pages under it: the pose is written straight to the paper.
   useEffect(() => {
-    function angleTo(progress: number, direction: Direction) {
-      turnRef.current?.style.setProperty('--flip-angle', `${flipAngle(direction, progress)}deg`);
+    function poseTo(progress: number, direction: Direction) {
+      const leaf = turnRef.current;
+      if (leaf) draw(leaf, progress, direction, modeAt.current);
     }
 
     function onMove(event: PointerEvent) {
@@ -245,7 +330,7 @@ export function useFlip(
 
       held.progress = progress;
       held.samples = trail(held.samples, { progress, time: event.timeStamp });
-      angleTo(progress, held.direction);
+      poseTo(progress, held.direction);
     }
 
     // A swipe that never chose a direction was a reader's finger passing through, and
@@ -338,7 +423,7 @@ export function useFlip(
   }, []);
 
   useEffect(() => {
-    return () => animation.current?.cancel();
+    return () => ground(flight.current);
   }, []);
 
   function grab(event: React.PointerEvent<HTMLElement>, direction: Direction) {

@@ -20,6 +20,13 @@ export default defineConfig({
   test: {
     dir: 'tests/browser',
     setupFiles: ['./vitest.browser.setup.ts'],
+    // Most of what this suite waits on is a leaf coming down, and a turn takes as long as it
+    // takes. The leaf in the air is eight strips each carrying both sides of a whole page, and
+    // in an uncompiled build with every Chromium file running at once, mounting them alone
+    // took up to a second before the turn could start — a second is Vitest's whole default.
+    // A poll that passes still returns the moment it does; this is only how long a failing
+    // one keeps trying.
+    expect: { poll: { timeout: 3000 } },
     browser: {
       enabled: true,
       // Pinned rather than inherited: it decides whether the suite reads the issue as a
