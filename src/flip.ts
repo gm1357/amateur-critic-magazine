@@ -96,6 +96,13 @@ export function remainingTravel(progress: number, settle: 'to' | 'from'): number
   return settle === 'to' ? 1 - progress : progress;
 }
 
+// Where a settle has got to, a share of the way through its time: from wherever the leaf was
+// let go to lying on the far side, or back on its own.
+export function settleProgress(progress: number, settle: 'to' | 'from', share: number): number {
+  const landing = settle === 'to' ? 1 : 0;
+  return progress + (landing - progress) * share;
+}
+
 // How far a finger has to travel before the magazine decides whether it is turning a page
 // or scrolling one. A fraction of a leaf rather than a pixel count, so it means the same
 // thing on a phone as on a desk.

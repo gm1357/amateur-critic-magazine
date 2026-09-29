@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { curlPose, eyeOf, stripsOf } from './curl';
-import type { StripLook } from './curl';
 import type { Sample } from './flip';
 import {
   dragProgress,
   flickVelocity,
   prefersReducedMotion,
   remainingTravel,
+  settleProgress,
   settleTarget,
   swipeIntent,
   swipeThreshold,
@@ -67,8 +67,15 @@ type Paper = {
   free: HTMLElement;
 }[];
 
+// Looked up once for each leaf and kept for as long as the leaf is: a drag reaches for it on
+// every pointer move, and nothing in a leaf changes while it is in the air.
+const papers = new WeakMap<HTMLElement, Paper>();
+
 function paperOf(leaf: HTMLElement): Paper {
-  return [...leaf.querySelectorAll<HTMLElement>('.leaf-strip')].map((strip) => {
+  const found = papers.get(leaf);
+  if (found) return found;
+
+  const paper = [...leaf.querySelectorAll<HTMLElement>('.leaf-strip')].map((strip) => {
     const on = (selector: string) =>
       strip.querySelector<HTMLElement>(`:scope > .leaf-face > ${selector}`)!;
 
@@ -80,16 +87,22 @@ function paperOf(leaf: HTMLElement): Paper {
       free: on('[data-shade="free"]'),
     };
   });
+  papers.set(leaf, paper);
+  return paper;
 }
 
 function shown(visible: boolean): string {
   return visible ? 'visible' : 'hidden';
 }
 
-// A drag writes the pose straight onto the paper, so holding a leaf never re-renders the
-// sixteen copies of a page it is cut from.
-function draw(paper: Paper, looks: StripLook[]) {
-  for (const [strip, { back, free, front, hinge, strip: node }] of paper.entries()) {
+// The one way the paper is moved, whether a drag or a settle is moving it: the whole pose at a
+// progress, written straight onto every strip in the same frame. So the two can never draw a
+// leaf differently, and holding one never re-renders the sixteen copies of a page it is cut
+// from.
+function draw(leaf: HTMLElement, progress: number, direction: Direction, mode: Mode) {
+  const looks = stripsOf(curlPose(progress), direction, eyeOf(mode, direction));
+
+  for (const [strip, { back, free, front, hinge, strip: node }] of paperOf(leaf).entries()) {
     const look = looks[strip];
     node.style.transform = look.transform;
     hinge.style.opacity = String(look.hinge);
@@ -242,13 +255,10 @@ export function useFlip(
 
     ground(flight.current);
 
-    const landed = turning.settle === 'to';
-    const from = turning.progress;
-    const to = landed ? 1 : 0;
-    const eye = eyeOf(mode, turning.direction);
-    const paper = paperOf(node);
+    const { direction, progress, settle } = turning;
+    const landed = settle === 'to';
     const poseAt = (share: number) =>
-      draw(paper, stripsOf(curlPose(from + (to - from) * share), turning.direction, eye));
+      draw(node, settleProgress(progress, settle, share), direction, mode);
 
     // One clock for the whole leaf, and the whole pose drawn from it every frame, the way a
     // drag draws it. The strips are separate layers, and separate animations are not kept in
@@ -259,8 +269,8 @@ export function useFlip(
     // eases, and `cancel()` still interrupts it.
     const clock = new Animation(
       new KeyframeEffect(null, null, {
-        duration: turnDuration(prefersReducedMotion(), remainingTravel(from, turning.settle)),
-        easing: turnEasing(from),
+        duration: turnDuration(prefersReducedMotion(), remainingTravel(progress, settle)),
+        easing: turnEasing(progress),
         fill: 'forwards',
       }),
       document.timeline,
@@ -304,10 +314,7 @@ export function useFlip(
   useEffect(() => {
     function poseTo(progress: number, direction: Direction) {
       const leaf = turnRef.current;
-      if (!leaf) return;
-
-      const eye = eyeOf(modeAt.current, direction);
-      draw(paperOf(leaf), stripsOf(curlPose(progress), direction, eye));
+      if (leaf) draw(leaf, progress, direction, modeAt.current);
     }
 
     function onMove(event: PointerEvent) {

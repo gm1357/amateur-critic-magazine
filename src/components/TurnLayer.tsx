@@ -1,9 +1,7 @@
-import { curlPose, PERSPECTIVE, stripEdges, STRIPS, transformsOf } from '../curl';
+import { curlPose, PERSPECTIVE, slotOf, transformsOf } from '../curl';
 import type { Page } from '../pages';
 import type { Turn } from '../spread';
 import Leaf, { LEAF } from './Leaf';
-
-const EDGES = stripEdges();
 
 type Side = 'left' | 'right';
 
@@ -26,35 +24,22 @@ function Print({ page }: { page: Page | undefined }) {
 // out short once the paper stood up off the book.
 //
 // Each side is a slot onto a whole copy of the page, slid along so the part under it is the
-// part this strip is cut from. The strip runs from `near` to `far` of the way out from the
-// spine; from the leaf's left-hand edge that is `near` in when the spine is on the left and
-// `1 - far` in when it is on the right. The back is the front turned over the spine, which
+// part this strip is cut from (`slotOf`). The back is the front turned over the spine, which
 // mirrors it — and mirrored in place, the part of the back page behind this strip starts
 // exactly as far in. The two washes shade the strip from either end.
 //
 // The strips at either end of the paper carry its side edges, which the copies of the page
 // leave uncoloured: the one at the spine, and the one at the free edge.
-function Strip({
-  flat,
-  side,
-  strip,
-  turn,
-}: {
-  flat: string;
-  side: Side;
-  strip: number;
-  turn: Turn;
-}) {
-  const near = EDGES[strip];
-  const far = EDGES[strip + 1];
-  const at = { '--print-at': side === 'right' ? near : 1 - far } as React.CSSProperties;
+function Strip({ flat, strip, turn }: { flat: string; strip: number; turn: Turn }) {
+  const slot = slotOf(strip, turn.direction);
+  const at = { '--print-at': slot.at } as React.CSSProperties;
 
   return (
     <div
       className="leaf-strip"
-      data-edge={strip === 0 ? 'spine' : strip === STRIPS - 1 ? 'free' : undefined}
+      data-edge={slot.edge}
       data-strip={strip}
-      style={{ '--strip-w': far - near, transform: flat } as React.CSSProperties}
+      style={{ '--strip-w': slot.width, transform: flat } as React.CSSProperties}
     >
       <div className="leaf-face">
         <div className="leaf-print" data-face="front" style={at}>
@@ -101,7 +86,7 @@ export default function TurnLayer({ ref, turn }: { ref: React.Ref<HTMLDivElement
       style={{ '--perspective': PERSPECTIVE } as React.CSSProperties}
     >
       {flat.map((transform, strip) => (
-        <Strip flat={transform} key={strip} side={side} strip={strip} turn={turn} />
+        <Strip flat={transform} key={strip} strip={strip} turn={turn} />
       ))}
     </div>
   );

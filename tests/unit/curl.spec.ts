@@ -10,6 +10,7 @@ import {
   rotation,
   shade,
   SHADE,
+  slotOf,
   stripEdges,
   STRIPS,
   stripsOf,
@@ -277,4 +278,36 @@ test('each strip is drawn as the same run of turns and slides at every pose', ()
   const backward = stripsOf(curlPose(0.3), 'backward', eyeOf('spread', 'backward'))[1].transform;
   expect(forward).toMatch(/^rotateY\(-[\d.]+deg\) translateX\([\d.]+%\) rotateY\(-[\d.]+deg\)$/);
   expect(backward).toMatch(/^rotateY\([\d.]+deg\) translateX\(-[\d.]+%\) rotateY\([\d.]+deg\)$/);
+});
+
+// The slot each strip shows its page through: where the part of the page it is cut from starts,
+// from the leaf's left-hand edge, and how wide it is. Turning forward the spine is on the left,
+// so the strips run left to right; turning back it is on the right, and they run the other way.
+test('the slots of the strips tile the page from the spine outward', () => {
+  const edges = stripEdges();
+
+  for (const direction of ['forward', 'backward'] as const) {
+    const slots = Array.from({ length: STRIPS }, (_, strip) => slotOf(strip, direction));
+
+    for (const [strip, { at, width }] of slots.entries()) {
+      expect(width).toBeCloseTo(edges[strip + 1] - edges[strip], 12);
+      expect(at).toBeCloseTo(direction === 'forward' ? edges[strip] : 1 - edges[strip + 1], 12);
+    }
+
+    // Laid side by side from the page's left-hand edge, they cover it exactly once.
+    const ordered = [...slots].sort((a, b) => a.at - b.at);
+    expect(ordered[0].at).toBeCloseTo(0, 12);
+    for (let slot = 1; slot < STRIPS; slot++) {
+      expect(ordered[slot].at).toBeCloseTo(ordered[slot - 1].at + ordered[slot - 1].width, 12);
+    }
+    expect(ordered.at(-1)!.at + ordered.at(-1)!.width).toBeCloseTo(1, 12);
+  }
+});
+
+// The page's own sides are drawn by the strips they belong to, and by no other.
+test('only the strips at the spine and the free edge carry an edge of the paper', () => {
+  for (const direction of ['forward', 'backward'] as const) {
+    const edges = Array.from({ length: STRIPS }, (_, strip) => slotOf(strip, direction).edge);
+    expect(edges).toEqual(['spine', ...Array(STRIPS - 2).fill(undefined), 'free']);
+  }
 });

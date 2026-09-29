@@ -31,6 +31,25 @@ export function stripEdges(): number[] {
   return Array.from({ length: STRIPS + 1 }, (_, edge) => Math.sqrt(edge / STRIPS));
 }
 
+// The slot a strip shows its page through: where the part of the page it is cut from starts,
+// as a share of the leaf from its left-hand edge, and how wide it is. The strip runs from its
+// inner cut to its outer one, out from the spine — which is on the leaf's left turning forward
+// and on its right turning back, where the same strip is that far in from the other side. The
+// strips at either end also carry an edge of the paper: its spine, and its free edge.
+export type Slot = { at: number; width: number; edge: 'spine' | 'free' | undefined };
+
+export function slotOf(strip: number, direction: Direction): Slot {
+  const edges = stripEdges();
+  const near = edges[strip];
+  const far = edges[strip + 1];
+
+  return {
+    at: direction === 'forward' ? near : 1 - far,
+    width: far - near,
+    edge: strip === 0 ? 'spine' : strip === STRIPS - 1 ? 'free' : undefined,
+  };
+}
+
 export type Pose = {
   // The angle each strip lies at, spine first.
   strips: number[];

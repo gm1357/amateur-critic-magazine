@@ -4,6 +4,7 @@ import {
   FLICK,
   flickVelocity,
   remainingTravel,
+  settleProgress,
   settleTarget,
   trail,
   VELOCITY_WINDOW,
@@ -189,4 +190,16 @@ test('a turn from rest eases in, and a leaf let go of carries on', () => {
   };
   expect(slopeOf(lift)).toBeLessThan(0.5);
   expect(slopeOf(carry)).toBeGreaterThan(1);
+});
+
+// Where a settle has got to at a share of its time: from wherever the leaf was let go, to lying
+// on the far side when it turns and back on its own side when it falls back.
+test('a settle runs from where the leaf was let go to where it comes down', () => {
+  expect(settleProgress(0.3, 'to', 0)).toBeCloseTo(0.3);
+  expect(settleProgress(0.3, 'to', 1)).toBeCloseTo(1);
+  expect(settleProgress(0.3, 'to', 0.5)).toBeCloseTo(0.65);
+
+  expect(settleProgress(0.3, 'from', 0)).toBeCloseTo(0.3);
+  expect(settleProgress(0.3, 'from', 1)).toBeCloseTo(0);
+  expect(settleProgress(0.3, 'from', 0.5)).toBeCloseTo(0.15);
 });
