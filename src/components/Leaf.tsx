@@ -17,7 +17,7 @@ export const LEAF =
 
 // The cover and back cover are their own masthead, and a blank leaf has nothing to run a
 // head or folio over — the chrome is for the pages of the issue proper.
-const CHROME_KINDS = new Set<Page['article']['kind']>(['contents', 'review']);
+const CHROME_KINDS = new Set<Page['article']['kind']>(['contents', 'introduction', 'review']);
 
 type LeafProps = {
   // Given only in the composing room, where this leaf is being laid out to be counted

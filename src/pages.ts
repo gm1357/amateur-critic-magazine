@@ -8,6 +8,7 @@ import { reviews } from './data/reviews';
 export type Article =
   | { path: string; label: string; kind: 'cover' }
   | { path: string; label: string; kind: 'contents' }
+  | { path: string; label: string; kind: 'introduction' }
   | { path: string; label: string; kind: 'review'; slug: string }
   | { path: string; label: string; kind: 'blank' }
   | { path: string; label: string; kind: 'back' };
@@ -23,6 +24,7 @@ export type Page = {
 };
 
 export const CONTENTS_PATH = '/contents';
+export const INTRODUCTION_PATH = '/introduction';
 export const BACK_PATH = '/back';
 const BLANK_PATH = '/blank';
 
@@ -40,10 +42,12 @@ export function partPath(article: Article, part: number): string {
 // The contents sits between the cover and the first review, so it is an article of the
 // issue like any other — that is what makes it paginate, print and key-navigate for free,
 // and what keeps the numbers it lists honest: they are read back out of the same pages.
+// The introduction follows it, so the reviews are listed before they are introduced.
 export function buildArticles(list: Review[]): Article[] {
   return [
     { path: '/', label: 'Cover', kind: 'cover' },
     { path: CONTENTS_PATH, label: 'Contents', kind: 'contents' },
+    { path: INTRODUCTION_PATH, label: 'Introduction', kind: 'introduction' },
     ...list.map((review): Article => ({
       path: reviewPath(review.slug),
       label: review.movie,
@@ -62,7 +66,9 @@ const BACK: Article = { path: BACK_PATH, label: 'Back cover', kind: 'back' };
 // than copy: a cover that outgrew its leaf would be a cover with a second page, which is
 // not a thing a magazine has. Everything with a body of text flows.
 export function flows(article: Article): boolean {
-  return article.kind === 'contents' || article.kind === 'review';
+  return (
+    article.kind === 'contents' || article.kind === 'introduction' || article.kind === 'review'
+  );
 }
 
 export function pagesOf(article: Article, parts: number): Page[] {

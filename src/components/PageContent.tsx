@@ -3,6 +3,7 @@ import BackCover from './BackCover';
 import BlankPage from './BlankPage';
 import Contents from './Contents';
 import Cover from './Cover';
+import Introduction from './Introduction';
 import Paginated from './Paginated';
 import ReviewPage from './ReviewPage';
 
@@ -28,6 +29,12 @@ export default function PageContent({ onParts, page, silent }: PageContentProps)
       return (
         <Paginated onParts={onParts} part={page.part} silent={silent}>
           <Contents />
+        </Paginated>
+      );
+    case 'introduction':
+      return (
+        <Paginated onParts={onParts} part={page.part} silent={silent}>
+          <Introduction />
         </Paginated>
       );
     case 'review':

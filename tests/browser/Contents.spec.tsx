@@ -3,7 +3,7 @@ import { expect, test } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH } from '../../src/pages';
+import { CONTENTS_PATH, INTRODUCTION_PATH } from '../../src/pages';
 import { folioOf, totalOf } from './issue';
 
 function renderContents() {
@@ -14,22 +14,36 @@ function renderContents() {
   );
 }
 
-test('the contents lists every review in the issue, in page order', async () => {
+test('the contents lists the introduction and then every review, in page order', async () => {
   const screen = await renderContents();
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Contents');
 
   const titles = screen.getByRole('heading', { level: 2 }).elements();
-  expect(titles.map((title) => title.textContent)).toEqual(reviews.map((review) => review.movie));
+  expect(titles.map((title) => title.textContent)).toEqual([
+    'Introduction',
+    ...reviews.map((review) => review.movie),
+  ]);
+});
+
+// The introduction belongs to the issue rather than to a day, so it is listed undated.
+test('the introduction entry links to the introduction and carries no date', async () => {
+  const screen = await renderContents();
+
+  await expect.element(screen.getByRole('heading', { level: 1 })).toBeVisible();
+  const [entry] = screen.getByRole('listitem').elements();
+
+  expect(entry.querySelector('a')?.getAttribute('href')).toBe(INTRODUCTION_PATH);
+  expect(entry.querySelector('time')).toBeNull();
 });
 
 // Dates repeat across the issue, so every claim here is made against the entry it
 // belongs to rather than against the page as a whole.
-test('each entry links to its review and dates it', async () => {
+test('each review entry links to its review and dates it', async () => {
   const screen = await renderContents();
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toBeVisible();
-  const entries = screen.getByRole('listitem').elements();
+  const entries = screen.getByRole('listitem').elements().slice(1);
 
   expect(entries).toHaveLength(reviews.length);
   entries.forEach((entry, index) => {
@@ -71,9 +85,9 @@ test('the folios beside the titles run in order and stay inside the issue', asyn
     Number(entry.querySelector('span.tabular-nums')?.textContent?.trim()),
   );
 
-  expect(folios).toHaveLength(reviews.length);
+  expect(folios).toHaveLength(reviews.length + 1);
   for (const [index, folio] of folios.entries()) {
-    // Past the cover and this listing, inside the back cover, and never behind the review
+    // Past the cover and this listing, inside the back cover, and never behind the entry
     // before it.
     expect(folio).toBeGreaterThan(2);
     expect(folio).toBeLessThan(total);
@@ -81,8 +95,20 @@ test('the folios beside the titles run in order and stay inside the issue', asyn
   }
 });
 
-// The listing is a promise about where a review is. Following it has to land on that page,
+// The listing is a promise about where an article is. Following it has to land on that page,
 // or the numbers printed beside the titles are decoration.
+test('following the introduction entry opens it, on the page the listing gave it', async () => {
+  const screen = await renderContents();
+
+  const [entry] = screen.getByRole('listitem').elements();
+  const listed = entry.querySelector('span.tabular-nums')?.textContent?.trim();
+
+  await screen.getByRole('link', { name: 'Introduction' }).click();
+
+  await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Introduction');
+  await expect.poll(() => folioOf(screen.container)).toBe(listed);
+});
+
 test('following an entry opens that review, on the page the listing gave it', async () => {
   const screen = await renderContents();
   const review = reviews[reviews.length - 1];

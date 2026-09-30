@@ -6,6 +6,7 @@ import {
   buildPages,
   CONTENTS_PATH,
   findPageIndex,
+  INTRODUCTION_PATH,
   isPastContents,
   type Page,
   pages,
@@ -192,6 +193,16 @@ test('nothing in front of the contents is past it', () => {
 
   expect(built[0].article.kind).toBe('cover');
   expect(built[1].article.kind).toBe('contents');
+});
+
+// The introduction is the first thing behind the listing, so it is where the bookmark
+// starts being printed.
+test('the introduction is past the contents', () => {
+  const built = buildPages(buildArticles(reviews), () => 1);
+  const introduction = built[findPageIndex(built, INTRODUCTION_PATH)];
+
+  expect(introduction.article.kind).toBe('introduction');
+  expect(isPastContents(built, introduction)).toBe(true);
 });
 
 // Including its own continuations: a listing that ran onto a second leaf is still the
