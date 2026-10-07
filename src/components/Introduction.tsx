@@ -16,22 +16,72 @@ export default function Introduction() {
       {/* Placeholder copy. */}
       <div className="mx-auto mt-[4cqw] max-w-[62ch] space-y-[2cqw] font-heading leading-relaxed text-pretty hyphens-auto text-ink">
         <p className="drop-cap">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt
-          ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-          ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
-          reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+          <strong>What is this?</strong> This website acts as a virtual magazine where I share my
+          personal reviews on movies that I have watched. My written reviews came before the
+          creation of this website, as a way for me to practice writing and expressing my thoughts
+          on films, never with the intention of professional publication. After a while, the idea to
+          come up with a personal blog to put those reviews in became appealing, and so the idea to
+          put this in the format of a virtual magazine was born. With this website, I marry my
+          passion for cinema with my skills in web development, creating an engaging platform for
+          sharing my thoughts and reviews. As a disclaimer, the writtings here are all pesonally
+          written, without the assistence of AI. The code in the other hand, is a mix of AI assisted
+          code generation and my knowledge guiding it.
         </p>
         <p>
-          Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit
-          anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-          accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore
-          veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+          <strong>Who is writing this anyway?</strong> My name is Gabriel Machado, I'm the ideator,
+          writer, and developer of this magazine web application. I am not a professional reviewer,
+          don't have any formal credentials in the journalism or entertainment fields, and my
+          opinions are purely personal, so don't take those reviews so seriously, have fun reading
+          instead and contact me if you have any questions or feedback. What I really am a
+          professional at, is creating and developing engaging web applications, which is how this
+          virtual magazine came to be.
         </p>
         <p>
-          Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia
-          consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam
-          est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non
-          numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+          <strong>Why read this?</strong> I Won't lie and say that this could be used as a curated
+          guide for movies to watch, the films put here are the ones I'm watching without rhyme or
+          reason, someetimes I stumble upon good ones, and sometimes not. But, with that in mind, I
+          hope that you at least go through some pages, read some reviews, and maybe even find
+          something that resonates with you.
+        </p>
+        <p>
+          If you want to look under the hood and see how this website is built, take a look at the{' '}
+          <a
+            href="https://github.com/gm1357/amateur-critic-magazine"
+            className="text-accent underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            GitHub Repository
+          </a>
+          . If you want to keep up with my latest movie updates and reviews, consider following my{' '}
+          <a
+            href="https://letterboxd.com/gmachado42/"
+            className="text-accent underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Letterboxd account
+          </a>
+          . If you like what you saw here, and want to keep in touch with me in a professional
+          manner, connect with me on{' '}
+          <a
+            href="https://www.linkedin.com/in/gabriel-machado-br/"
+            className="text-accent underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            LinkedIn
+          </a>
+          . If you have any questions or feedback, feel free to leave me a message at{' '}
+          <a
+            href="mailto:g_machado1@hotmail.com"
+            className="text-accent underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            g_machado1@hotmail.com
+          </a>
+          .
         </p>
       </div>
     </article>
