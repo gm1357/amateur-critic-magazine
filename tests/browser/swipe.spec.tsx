@@ -3,7 +3,7 @@ import { expect, test } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { CONTENTS_PATH, reviewPath } from '../../src/pages';
+import { CONTENTS_PATH, INTRODUCTION_PATH, reviewPath } from '../../src/pages';
 import { folioOf, openAt } from './issue';
 import { centreOf, swipe } from './pointer';
 
@@ -57,8 +57,8 @@ test('swiping the other way turns back', async () => {
 
   await expect.poll(() => spreadAt(book)).toBe(from - 1);
 
-  // Whatever is behind the first review is the end of the listing that pointed at it.
-  expect(openAt(screen.container).every((page) => page.startsWith(CONTENTS_PATH))).toBe(true);
+  // Whatever is behind the first review is the end of the introduction in front of it.
+  expect(openAt(screen.container).every((page) => page.startsWith(INTRODUCTION_PATH))).toBe(true);
 });
 
 // A page is not turned out from under a finger that was going somewhere else.

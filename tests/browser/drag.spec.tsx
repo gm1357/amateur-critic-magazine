@@ -105,7 +105,9 @@ test('the edge can be taken hold of in either direction', async () => {
   await drag(grip, { x: grip.x + leafWidth(screen.container) * 0.8, y: grip.y });
 
   await expect.poll(() => spreadAt(book)).toBe(from - 1);
-  await expect.element(screen.getByRole('heading', { level: 1, name: 'Contents' })).toBeVisible();
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: 'Introduction' }))
+    .toBeVisible();
 });
 
 // The browser sends this when it decides the gesture was really someone else's.

@@ -112,7 +112,7 @@ tmux capture-pane -pt acm -S -200 | grep -v '^$' | tail -20
 
 ### The URLs
 
-`/` cover, `/contents`, then `/reviews/<slug>` for each JSON file in
+`/` cover, `/contents`, `/introduction`, then `/reviews/<slug>` for each JSON file in
 `src/data/reviews/` (`the-celebration`, `nirvana-band-show-movie`, `the-drama`,
 `wake-up-dead-man`), ordered by their `date`. Anything else is the 404 — which
 renders a bare leaf with no `data-page`, no running head and no pager, so
@@ -164,7 +164,7 @@ globs the whole repo including `.claude/`, so run `npm run fmt` after editing
   the `.turn-zone` grip (9% of the leaf, at the outer edge). A drag from the
   middle of the page does nothing.
 - **`state`, not `url`, is the assertion.** The URL is one page; the desk shows
-  one or two. Reading `spread` mode, `/reviews/the-celebration` puts
+  one or two. Reading `spread` mode, `/introduction` puts the last leaf of
   `/contents` on the left — `state` reports both, `url` hides it.
 - **Viewport is model, not styling.** 1024px (`64rem`, `src/useMode.ts`) decides
   whether the issue opens as a spread, which changes what a Next click does

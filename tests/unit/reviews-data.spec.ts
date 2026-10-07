@@ -9,6 +9,8 @@ import {
   CONTENTS_PATH,
   findPageIndex,
   findPageNumber,
+  flows,
+  INTRODUCTION_PATH,
   nearestPage,
   pages,
   reviewPath,
@@ -103,12 +105,13 @@ test('findReview looks up by slug and misses cleanly', () => {
   expect(findReview(undefined)).toBeUndefined();
 });
 
-test('the cover is page one, the contents page two, and every review follows', () => {
+test('the cover is page one, the contents two, the introduction three, then every review', () => {
   const built = singles(reviews);
-  const body = built.slice(2, 2 + reviews.length);
+  const body = built.slice(3, 3 + reviews.length);
 
   expect(built[0].path).toBe('/');
   expect(built[1].path).toBe(CONTENTS_PATH);
+  expect(built[2].path).toBe(INTRODUCTION_PATH);
   expect(body.map((page) => page.label)).toEqual(reviews.map((review) => review.movie));
 });
 
@@ -116,10 +119,11 @@ test('the cover is page one, the contents page two, and every review follows', (
 // screen without the router having matched it.
 test('every page knows what kind of page it is', () => {
   const built = singles(reviews);
-  const body = built.slice(2, 2 + reviews.length);
+  const body = built.slice(3, 3 + reviews.length);
 
   expect(built[0].article.kind).toBe('cover');
   expect(built[1].article.kind).toBe('contents');
+  expect(built[2].article.kind).toBe('introduction');
   expect(kindsOf(body)).toEqual(reviews.map(() => 'review'));
   expect(
     body.map((page) => (page.article.kind === 'review' ? page.article.slug : undefined)),
@@ -143,8 +147,21 @@ test('an article that runs over becomes as many pages as it takes', () => {
   expect(continued.every((page) => page.parts === 3)).toBe(true);
 
   // A review that grew a page pushes everything printed after it along.
-  expect(findPageNumber(built, reviewPath('one'))).toBe(3);
-  expect(findPageNumber(built, reviewPath('two'))).toBe(6);
+  expect(findPageNumber(built, reviewPath('one'))).toBe(4);
+  expect(findPageNumber(built, reviewPath('two'))).toBe(7);
+});
+
+// The introduction is copy, not a composition, so it is continued like any other article —
+// and a longer one pushes the first review along with it.
+test('an introduction that runs over is continued onto the next leaf', () => {
+  const list = buildArticles([reviewOf('one')]);
+  const built = buildPages(list, (article) => (article.path === INTRODUCTION_PATH ? 2 : 1));
+
+  expect(list.filter((article) => article.kind === 'introduction').every(flows)).toBe(true);
+  expect(
+    built.filter((page) => page.article.kind === 'introduction').map((page) => page.path),
+  ).toEqual([INTRODUCTION_PATH, `${INTRODUCTION_PATH}/2`]);
+  expect(findPageNumber(built, reviewPath('one'))).toBe(5);
 });
 
 // The first page of an article keeps the article's own URL, so a link into the issue is a
@@ -171,7 +188,7 @@ test('a page a shortened article no longer has falls back to its last', () => {
 
 // The back cover mirrors the front: alone on its own leaf, with nothing to face. The
 // front gets that for free from array bounds; the back needs a blank leaf ahead of it
-// whenever the reviews alone would leave it sharing a spread with the last one.
+// whenever the pages ahead of it would leave it sharing a spread with the last one.
 test('the back cover is always the last page, and it is always alone', () => {
   expect(pages.at(-1)?.path).toBe(BACK_PATH);
 
@@ -189,18 +206,25 @@ test('the back cover is always the last page, and it is always alone', () => {
 // keep the back cover isolated — and it is a parity of *leaves*, so an article that ran
 // over is what decides it just as much as one that was added.
 test('a blank leaf appears only when the pages ahead would pair with the back cover', () => {
-  const odd = singles([reviewOf('one')]);
-  const even = singles([reviewOf('one'), reviewOf('two')]);
+  const odd = singles([reviewOf('one'), reviewOf('two')]);
+  const even = singles([reviewOf('one')]);
 
-  // The same odd issue again, with the one review continued onto a second leaf: the extra
+  // The same even issue again, with the one review continued onto a second leaf: the extra
   // page flips the parity, so this time the blank is the one that is not needed.
   const continued = buildPages(buildArticles([reviewOf('one')]), (article) =>
     article.path === reviewPath('one') ? 2 : 1,
   );
 
-  expect(kindsOf(odd)).toEqual(['cover', 'contents', 'review', 'back']);
-  expect(kindsOf(even)).toEqual(['cover', 'contents', 'review', 'review', 'blank', 'back']);
-  expect(kindsOf(continued)).toEqual(['cover', 'contents', 'review', 'review', 'blank', 'back']);
+  expect(kindsOf(odd)).toEqual(['cover', 'contents', 'introduction', 'review', 'review', 'back']);
+  expect(kindsOf(even)).toEqual(['cover', 'contents', 'introduction', 'review', 'blank', 'back']);
+  expect(kindsOf(continued)).toEqual([
+    'cover',
+    'contents',
+    'introduction',
+    'review',
+    'review',
+    'back',
+  ]);
 
   for (const built of [odd, even, continued]) {
     const back = findPageIndex(built, BACK_PATH);
@@ -218,8 +242,9 @@ test('the back cover spread is addressed by the back cover itself', () => {
 test('findPageIndex maps a pathname to its page', () => {
   expect(findPageIndex(pages, '/')).toBe(0);
   expect(findPageIndex(pages, CONTENTS_PATH)).toBe(1);
-  expect(findPageIndex(pages, `/reviews/${reviews[0].slug}`)).toBe(2);
-  expect(findPageIndex(pages, `/reviews/${reviews[0].slug}/`)).toBe(2);
+  expect(findPageIndex(pages, INTRODUCTION_PATH)).toBe(2);
+  expect(findPageIndex(pages, `/reviews/${reviews[0].slug}`)).toBe(3);
+  expect(findPageIndex(pages, `/reviews/${reviews[0].slug}/`)).toBe(3);
 });
 
 // The contents prints these numbers, so a folio that disagreed with the pager would put
@@ -227,7 +252,8 @@ test('findPageIndex maps a pathname to its page', () => {
 test('findPageNumber is the printed folio, counting from one', () => {
   expect(findPageNumber(pages, '/')).toBe(1);
   expect(findPageNumber(pages, CONTENTS_PATH)).toBe(2);
-  expect(findPageNumber(pages, `/reviews/${reviews[0].slug}`)).toBe(3);
+  expect(findPageNumber(pages, INTRODUCTION_PATH)).toBe(3);
+  expect(findPageNumber(pages, `/reviews/${reviews[0].slug}`)).toBe(4);
   expect(findPageNumber(pages, '/some/random/path')).toBe(0);
 });
 

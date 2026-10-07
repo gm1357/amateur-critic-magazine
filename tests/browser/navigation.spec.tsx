@@ -4,7 +4,7 @@ import { userEvent } from 'vitest/browser';
 import { MemoryRouter } from 'react-router';
 import App from '../../src/App';
 import { reviews } from '../../src/data/reviews';
-import { BACK_PATH, CONTENTS_PATH, reviewPath } from '../../src/pages';
+import { BACK_PATH, CONTENTS_PATH, INTRODUCTION_PATH, reviewPath } from '../../src/pages';
 import { folioOf, openAt, totalOf } from './issue';
 
 const first = reviews[0];
@@ -26,28 +26,33 @@ test('the next link moves from the cover to the contents', async () => {
   await expect.poll(() => folioOf(screen.container)).toBe('2');
 });
 
-// The contents runs to whatever length it runs to, so what follows it is "more contents
-// until there is no more of it" rather than a page number written down here.
-test('paging on from the contents reaches the first review', async () => {
+// The contents and the introduction run to whatever length they run to, so what follows the
+// listing is "more of it, then the introduction" rather than a page number written down here.
+test('paging on from the contents passes the introduction and reaches the first review', async () => {
   const screen = await renderAt(CONTENTS_PATH);
   const next = screen.getByRole('link', { name: 'Next' });
   const opens = reviewPath(first.slug);
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Contents');
+  const book = screen.container.querySelector('[data-spread]')!;
 
   const passed: string[] = [];
   for (let turn = 0; turn < 12 && !openAt(screen.container).includes(opens); turn++) {
-    const open = openAt(screen.container);
-    passed.push(...open);
+    const spread = book.getAttribute('data-spread');
+    passed.push(...openAt(screen.container));
 
+    // The spread only moves once the leaf is down. Waiting on the open pages instead would
+    // catch the leaf in the air, with the page it is leaving still among them.
     await next.click();
-    await expect.poll(() => openAt(screen.container)).not.toEqual(open);
+    await expect.poll(() => book.getAttribute('data-spread')).not.toBe(spread);
   }
 
-  // Every page between the two is more of the contents — the review is reached by reading
-  // through the listing, not by skipping the rest of it.
-  expect(passed.every((page) => page.startsWith(CONTENTS_PATH))).toBe(true);
-  expect(passed.length).toBeGreaterThan(0);
+  // Every page between the two is the rest of the listing and then the introduction — the
+  // review is reached by reading through both, not by skipping either.
+  const introduction = passed.findIndex((page) => page.startsWith(INTRODUCTION_PATH));
+  expect(introduction).toBeGreaterThan(0);
+  expect(passed.slice(0, introduction).every((page) => page.startsWith(CONTENTS_PATH))).toBe(true);
+  expect(passed.slice(introduction).every((page) => page.startsWith(INTRODUCTION_PATH))).toBe(true);
 
   await expect.element(screen.getByRole('heading', { level: 1 })).toHaveTextContent(first.movie);
   await expect.element(screen.getByRole('img', { name: `${first.score} out of 10` })).toBeVisible();

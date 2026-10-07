@@ -1,6 +1,6 @@
 # Amateur Critic Magazine
 
-A movie-review aggregator that reads like a print magazine. You land on the cover; every page after that is one review. Page through with the Prev/Next links, the left and right arrow keys, or by linking straight to a review.
+A movie-review aggregator that reads like a print magazine. You land on the cover, then the contents and an introduction; every page after that is one review. Page through with the Prev/Next links, the left and right arrow keys, or by linking straight to a review.
 
 Every page is a sheet of A4. The sheet scales to fit whatever screen it's on and keeps its proportions, so a review that runs long scrolls inside the page rather than making it taller — and printing gives you the same page on real A4.
 
