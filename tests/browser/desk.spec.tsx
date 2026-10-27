@@ -138,3 +138,49 @@ for (const label of ['Light oak', 'Light']) {
     expect(lightness(getComputedStyle(sheet).backgroundColor)).toBeLessThan(0.1);
   });
 }
+
+// Firefox cannot be trusted with tracked capitals inside a select: it clipped the last
+// letter of the longest desk, and drew its hidden arrow a letter-space wide after the text.
+// So the select draws no ink, and the name is a label under it. What the reader sees has to
+// be whole: every name ends inside the box and short of the arrow.
+test('every desk’s name fits in the picker without being clipped', async () => {
+  const screen = await renderAt('/');
+  const picker = screen.getByRole('combobox', { name: 'Desk' });
+  await expect.element(picker).toBeVisible();
+
+  const select = picker.element() as HTMLSelectElement;
+  expect(getComputedStyle(select).color).toBe('rgba(0, 0, 0, 0)');
+
+  const label = select.parentElement!.querySelector<HTMLElement>('[data-desk-label]')!;
+  const arrow = select.parentElement!.querySelector('[data-desk-arrow]')!;
+
+  for (const desk of DESKS) {
+    await userEvent.selectOptions(picker, desk.label);
+    await expect.poll(() => label.textContent).toBe(desk.label);
+
+    const text = document.createRange();
+    text.selectNodeContents(label);
+    const ink = text.getBoundingClientRect();
+    const box = select.getBoundingClientRect();
+
+    expect(ink.left, desk.label).toBeGreaterThanOrEqual(box.left);
+    expect(ink.right, desk.label).toBeLessThanOrEqual(arrow.getBoundingClientRect().left);
+  }
+});
+
+// The select draws no ink of its own, and an outline in the text colour would go with it.
+test('the picker shows where keyboard focus is', async () => {
+  const screen = await renderAt('/');
+  const picker = screen.getByRole('combobox', { name: 'Desk' });
+  await expect.element(picker).toBeVisible();
+
+  const select = picker.element() as HTMLSelectElement;
+  select.focus();
+  expect(select.matches(':focus-visible')).toBe(true);
+
+  const style = getComputedStyle(select);
+  expect(style.outlineStyle).not.toBe('none');
+  expect(style.outlineColor).toBe(
+    getComputedStyle(select.parentElement!.querySelector('[data-desk-label]')!).color,
+  );
+});
