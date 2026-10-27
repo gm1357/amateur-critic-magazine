@@ -4,6 +4,7 @@ export const DESKS = [
   { id: 'black', label: 'Black' },
   { id: 'walnut', label: 'Walnut' },
   { id: 'oak', label: 'Light oak' },
+  { id: 'light', label: 'Light' },
 ] as const;
 
 export type Desk = (typeof DESKS)[number]['id'];

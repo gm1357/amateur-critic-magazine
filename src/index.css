@@ -19,6 +19,7 @@
   /* The tables the magazine can lie on: the base tone of each wood, under its grain. */
   --wood: #1e120a;
   --oak: #c9a77c;
+  --light-desk: #e6e3de;
 }
 
 /* Paper is paper on a printer too — the dark palette would otherwise print as a black
@@ -191,6 +192,14 @@
     --surface-grain: url('./oak-grain.svg');
     --on-desk: #3b2a1c;
     --desk-shadow: rgb(30 18 8 / 0.35);
+  }
+
+  /* A plain light desk, the light counterpart of black: no boards and no grain, only a
+     dark ink for the chrome and a softer shadow under the paper. */
+  &[data-desk='light'] {
+    --surface: var(--light-desk);
+    --on-desk: #4b4b52;
+    --desk-shadow: rgb(0 0 0 / 0.25);
   }
 
   @media print {

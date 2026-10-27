@@ -121,7 +121,7 @@ test('the picker stands in the top right corner, clear of the book', async () =>
 
 // A light table takes a dark ink for everything standing on it, or the pager disappears
 // into the wood. The paper itself does not change: the issue is dark whatever it lies on.
-for (const label of ['Light oak']) {
+for (const label of ['Light oak', 'Light']) {
   test(`on ${label.toLowerCase()} the desk is light and the pager is still readable`, async () => {
     const screen = await renderAt('/');
     await expect.element(screen.getByRole('link', { name: 'Next' })).toBeVisible();
