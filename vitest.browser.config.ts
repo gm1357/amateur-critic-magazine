@@ -20,6 +20,11 @@ export default defineConfig({
   test: {
     dir: 'tests/browser',
     setupFiles: ['./vitest.browser.setup.ts'],
+    // A page turn takes about 700ms to land, and most of what this suite polls for is the
+    // paper coming down. Vitest's default budget of 1000ms left a turn 300ms of slack, which
+    // a CI runner sharing its cores between four browsers did not always have. A poll
+    // that passes returns at once, so this only changes how long a real failure takes.
+    expect: { poll: { timeout: 3000 } },
     browser: {
       enabled: true,
       // Pinned rather than inherited: it decides whether the suite reads the issue as a
