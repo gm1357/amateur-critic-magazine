@@ -15,6 +15,9 @@
      below: it is the cut edge of a piece of card lying on the desk, and it is black on
      screen and on paper alike, the way `--color-curl` is. */
   --bookmark-edge: #0b0b0d;
+
+  /* The table the magazine lies on: the darkest tone in the walnut, under its grain. */
+  --wood: #1e120a;
 }
 
 /* Paper is paper on a printer too — the dark palette would otherwise print as a black
@@ -111,6 +114,44 @@
   @media print {
     --leaf-w: 210mm;
     --leaves: 1;
+  }
+}
+
+/* The desk is a wooden table: dark walnut boards laid across the screen, with the grain
+   drawn by an SVG turbulence stretched along the board and the seams and the board-to-board
+   change of tone by gradients, so there is no image to fetch and nothing to go blurry at
+   any size. A pool of light falls where the magazine lies and the table goes dark towards
+   the edges, which keeps the pager legible where it stands. All of this is off the paper,
+   so it is sized in `rem` like the rest of the desk, never in the leaf's units. A printer
+   gets none of it: on paper the desk goes away. */
+@utility desk-wood {
+  --board: 7.5rem;
+  --seam: 2px;
+
+  background-color: var(--wood);
+  background-image:
+    radial-gradient(ellipse 80% 70% at 50% 45%, transparent 35%, rgb(0 0 0 / 0.6) 100%),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--board) - var(--seam)),
+      rgb(0 0 0 / 0.55) calc(var(--board) - var(--seam)) var(--board)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.025) 0 var(--board),
+      rgb(0 0 0 / 0.12) var(--board) calc(var(--board) * 2),
+      transparent calc(var(--board) * 2) calc(var(--board) * 3),
+      rgb(0 0 0 / 0.06) calc(var(--board) * 3) calc(var(--board) * 4)
+    ),
+    url('./wood-grain.svg');
+  background-size:
+    100% 100%,
+    auto,
+    auto,
+    120rem 60rem;
+
+  @media print {
+    background: var(--desk);
   }
 }
 

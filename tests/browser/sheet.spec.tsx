@@ -86,3 +86,19 @@ test('the issue is printed dark whatever the reader’s browser prefers', async 
   expect(lightness(getComputedStyle(sheet).backgroundColor)).toBeLessThan(0.1);
   expect(lightness(getComputedStyle(heading.element()).color)).toBeGreaterThan(0.9);
 });
+
+// The desk is a wooden table rather than a flat fill: a warm brown under the grain, with
+// the grain itself and the boards drawn over it. On paper it goes away, but that is a
+// print stylesheet, which this suite does not lay out.
+test('the magazine lies on a wooden table', async () => {
+  const screen = await renderAt('/');
+  await expect.element(screen.getByRole('heading', { level: 1 })).toBeVisible();
+
+  const desk = getComputedStyle(screen.container.querySelector('.magazine-desk')!);
+  const [r, g, b] = desk.backgroundColor.match(/[\d.]+/g)!.map(Number);
+
+  expect(r).toBeGreaterThan(g);
+  expect(g).toBeGreaterThan(b);
+  expect(desk.backgroundImage).toContain('url(');
+  expect(desk.backgroundImage).toContain('repeating-linear-gradient');
+});
