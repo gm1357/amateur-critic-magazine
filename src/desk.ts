@@ -1,9 +1,9 @@
 // What the magazine is lying on. The reader chooses, so this is a preference rather than
 // part of the issue: none of it reaches the paper, and none of it is printed.
 export const DESKS = [
-  { id: 'black', label: 'Black' },
   { id: 'walnut', label: 'Walnut' },
   { id: 'oak', label: 'Light oak' },
+  { id: 'black', label: 'Black' },
   { id: 'light', label: 'Light' },
 ] as const;
 

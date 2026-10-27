@@ -12,3 +12,7 @@ test('a stored value that is not a desk falls back to walnut', () => {
     expect(parseDesk(value)).toBe(DEFAULT_DESK);
   }
 });
+
+test('the picker lists the woods first, then the plain desks', () => {
+  expect(DESKS.map((desk) => desk.label)).toEqual(['Walnut', 'Light oak', 'Black', 'Light']);
+});
