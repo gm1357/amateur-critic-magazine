@@ -1,7 +1,7 @@
 import { MAX_SCALE, MIN_SCALE } from '../zoom';
 
 const BUTTON =
-  'flex h-[1.6em] w-[1.6em] items-center justify-center text-sm text-muted disabled:opacity-25';
+  'flex h-[1.6em] w-[1.6em] items-center justify-center text-sm text-on-desk disabled:opacity-25';
 
 type ZoomControlsProps = {
   scale: number;
@@ -26,7 +26,7 @@ export default function ZoomControls({ scale, onIn, onOut }: ZoomControlsProps) 
       </button>
 
       {/* The magnification, announced as it changes, so it is not a silent control. */}
-      <output aria-live="polite" className="w-[3.5em] text-center tabular-nums text-muted">
+      <output aria-live="polite" className="w-[3.5em] text-center tabular-nums text-on-desk">
         {Math.round(scale * 100)}%
       </output>
 

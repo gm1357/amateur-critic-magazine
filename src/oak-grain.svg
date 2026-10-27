@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="960">
+  <!-- The grain of the light oak desk. It is the walnut's filter turned round: dark streaks
+       with alpha over a pale board, so the grain darkens the wood rather than lighting it.
+       Noise stretched along the x axis reads as fibres running down a board; a second, much
+       broader noise displaces it so the fibres wander. The filter is run over a margin wider
+       than the tile, because a displacement samples from up to half its scale away and would
+       pull empty pixels in at the edges. -->
+  <filter id="grain" filterUnits="userSpaceOnUse" x="-60" y="-60" width="2040" height="1080">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0016 0.008" numOctaves="2" seed="5" result="wander" />
+    <feTurbulence type="fractalNoise" baseFrequency="0.0022 0.05" numOctaves="3" seed="23" result="fibre" />
+    <feDisplacementMap in="fibre" in2="wander" scale="60" xChannelSelector="R" yChannelSelector="G" />
+    <feColorMatrix values="0 0 0 0 0.36  0 0 0 0 0.22  0 0 0 0 0.11  1.0 0 0 0 -0.4" />
+  </filter>
+  <rect x="-60" y="-60" width="2040" height="1080" filter="url(#grain)" />
+</svg>

@@ -118,3 +118,23 @@ test('the picker stands in the top right corner, clear of the book', async () =>
     box.bottom > book.top;
   expect(overlaps).toBe(false);
 });
+
+// A light table takes a dark ink for everything standing on it, or the pager disappears
+// into the wood. The paper itself does not change: the issue is dark whatever it lies on.
+for (const label of ['Light oak']) {
+  test(`on ${label.toLowerCase()} the desk is light and the pager is still readable`, async () => {
+    const screen = await renderAt('/');
+    await expect.element(screen.getByRole('link', { name: 'Next' })).toBeVisible();
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Desk' }), label);
+
+    const desk = deskOf(screen.container);
+    await expect.poll(() => lightness(getComputedStyle(desk).backgroundColor)).toBeGreaterThan(0.6);
+
+    const next = screen.getByRole('link', { name: 'Next' }).element();
+    expect(lightness(getComputedStyle(next).color)).toBeLessThan(0.5);
+
+    const sheet = desk.querySelector('[data-spread] .a4-leaf')!;
+    expect(lightness(getComputedStyle(sheet).backgroundColor)).toBeLessThan(0.1);
+  });
+}
