@@ -38,6 +38,7 @@
   --font-heading: 'Iowan Old Style', Palatino, 'Book Antiqua', Georgia, serif;
   --color-paper: var(--paper);
   --color-desk: var(--desk);
+  --color-on-desk: var(--on-desk);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-rule: var(--rule);
@@ -117,38 +118,67 @@
   }
 }
 
-/* The desk is a wooden table: dark walnut boards laid across the screen, with the grain
-   drawn by an SVG turbulence stretched along the board and the seams and the board-to-board
-   change of tone by gradients, so there is no image to fetch and nothing to go blurry at
-   any size. A pool of light falls where the magazine lies and the table goes dark towards
-   the edges, which keeps the pager legible where it stands. All of this is off the paper,
-   so it is sized in `rem` like the rest of the desk, never in the leaf's units. A printer
-   gets none of it: on paper the desk goes away. */
-@utility desk-wood {
+/* What the magazine is lying on, chosen by the reader as `data-desk` on the desk. Every desk
+   is the same four layers — a pool of light where the magazine lies, the seams between
+   boards, the boards' differing tones, and the grain — and a plain desk simply has none of
+   them. The woods draw the grain with an SVG turbulence stretched along the board and the
+   rest with gradients, so there is no image to fetch and nothing to go blurry at any size.
+   All of this is off the paper, so it is sized in `rem` like the rest of the desk, never in
+   the leaf's units. A printer gets none of it: on paper the desk goes away.
+
+   `--on-desk` is the ink for whatever stands on the desk rather than on a page — the
+   picker, and the pager and zoom beside it — and `--desk-shadow` is the shadow the paper
+   casts onto it. */
+@utility desk-surface {
   --board: 7.5rem;
   --seam: 2px;
 
-  background-color: var(--wood);
+  --surface: var(--desk);
+  --surface-light: none;
+  --surface-seams: none;
+  --surface-tones: none;
+  --surface-grain: none;
+  --on-desk: var(--muted);
+  --desk-shadow: rgb(0 0 0 / 0.5);
+
+  background-color: var(--surface);
   background-image:
-    radial-gradient(ellipse 80% 70% at 50% 45%, transparent 35%, rgb(0 0 0 / 0.6) 100%),
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0 calc(var(--board) - var(--seam)),
-      rgb(0 0 0 / 0.55) calc(var(--board) - var(--seam)) var(--board)
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      rgb(255 255 255 / 0.025) 0 var(--board),
-      rgb(0 0 0 / 0.12) var(--board) calc(var(--board) * 2),
-      transparent calc(var(--board) * 2) calc(var(--board) * 3),
-      rgb(0 0 0 / 0.06) calc(var(--board) * 3) calc(var(--board) * 4)
-    ),
-    url('./wood-grain.svg');
+    var(--surface-light), var(--surface-seams), var(--surface-tones), var(--surface-grain);
   background-size:
     100% 100%,
     auto,
     auto,
     120rem 60rem;
+
+  /* A table made of boards: the layers every wood shares, each in its own colours. */
+  &[data-desk='walnut'] {
+    --surface-light: radial-gradient(
+      ellipse 80% 70% at 50% 45%,
+      transparent 35%,
+      var(--vignette) 100%
+    );
+    --surface-seams: repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--board) - var(--seam)),
+      var(--seam-color) calc(var(--board) - var(--seam)) var(--board)
+    );
+    --surface-tones: repeating-linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.025) 0 var(--board),
+      rgb(0 0 0 / 0.12) var(--board) calc(var(--board) * 2),
+      transparent calc(var(--board) * 2) calc(var(--board) * 3),
+      rgb(0 0 0 / 0.06) calc(var(--board) * 3) calc(var(--board) * 4)
+    );
+  }
+
+  /* Dark boards under light streaks, going dark towards the edges — which keeps the pager
+     legible where it stands. */
+  &[data-desk='walnut'] {
+    --surface: var(--wood);
+    --vignette: rgb(0 0 0 / 0.6);
+    --seam-color: rgb(0 0 0 / 0.55);
+    --surface-grain: url('./walnut-grain.svg');
+  }
 
   @media print {
     background: var(--desk);

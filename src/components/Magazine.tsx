@@ -5,9 +5,11 @@ import { articles, findPageIndex, nearestPage } from '../pages';
 import { anchorOf, planTurn, spreadAt, spreadCount, spreadFolio, spreadOf } from '../spread';
 import { useFlip } from '../useFlip';
 import { useMode } from '../useMode';
+import { useDesk } from '../useDesk';
 import { useTypeset } from '../useTypeset';
 import { useZoom } from '../useZoom';
 import ComposingRoom from './ComposingRoom';
+import DeskPicker from './DeskPicker';
 import { LEAF } from './Leaf';
 import NotFound from './NotFound';
 import PageNav from './PageNav';
@@ -22,12 +24,13 @@ const EDITABLE = /^(?:INPUT|TEXTAREA|SELECT)$/;
 // and nothing on the desk is ever meant to scroll the page: overflow reaching the document
 // grew it a scrollbar mid-turn, which narrowed the desk and typeset the issue again.
 const DESK =
-  'magazine-desk flex min-h-svh flex-col items-center justify-center overflow-clip desk-wood p-(--sheet-gutter) print:block print:p-0';
+  'magazine-desk flex min-h-svh flex-col items-center justify-center overflow-clip desk-surface p-(--sheet-gutter) print:block print:p-0';
 
 export default function Magazine() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const mode = useMode();
+  const [deskTheme, setDeskTheme] = useDesk();
 
   // The issue counts its own pages, so the model is state rather than a constant: an
   // article that needs two leaves renumbers everything printed after it.
@@ -112,7 +115,17 @@ export default function Magazine() {
 
   return (
     <IssueProvider value={pages}>
-      <div className={DESK} data-mode={mode} data-zoom={zoom.zoomed ? 'in' : 'fit'} ref={desk}>
+      <div
+        className={DESK}
+        data-desk={deskTheme}
+        data-mode={mode}
+        data-zoom={zoom.zoomed ? 'in' : 'fit'}
+        ref={desk}
+      >
+        {/* Outside the issue's own branches, so a reader can change the table even from a
+            page that was never printed. */}
+        <DeskPicker onChange={setDeskTheme} value={deskTheme} />
+
         {/* A pathname the page list does not recognise was never printed. That -1 is the
             one signal for "not a page of this issue", and it takes the chrome with it. */}
         {index < 0 ? (

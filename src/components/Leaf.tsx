@@ -13,7 +13,7 @@ import ReviewFrame from './ReviewFrame';
 // it is positioned in and measured from, and the stacking context that keeps it above the
 // paper and under the type.
 export const LEAF =
-  'a4-leaf @container relative isolate flex touch-pan-y flex-col overflow-hidden border border-rule bg-paper font-sans text-muted shadow-xl shadow-black/50 print:border-0 print:shadow-none';
+  'a4-leaf @container relative isolate flex touch-pan-y flex-col overflow-hidden border border-rule bg-paper font-sans text-muted shadow-xl shadow-(color:--desk-shadow) print:border-0 print:shadow-none';
 
 // The cover and back cover are their own masthead, and a blank leaf has nothing to run a
 // head or folio over — the chrome is for the pages of the issue proper.
