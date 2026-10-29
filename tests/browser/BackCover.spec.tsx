@@ -72,8 +72,28 @@ test('the barcode prints the span of the issue and is not announced', async () =
 
   await expect.element(screen.getByText(`${opened} ${closed}`)).toBeVisible();
   expect(
-    leafOf(screen.container).querySelector('svg')?.closest('[aria-hidden="true"]'),
+    leafOf(screen.container).querySelector('footer svg')?.closest('[aria-hidden="true"]'),
   ).not.toBeNull();
+});
+
+// The mark sits in the paper's slack between the masthead and the teaser, equally far from
+// each. It repeats the title, so it is a drawing and not something read out.
+test('the monogram is centred between the strapline and the teaser', async () => {
+  const screen = await renderBackCover();
+  await expect.element(screen.getByText('Inside this issue')).toBeVisible();
+
+  const leaf = leafOf(screen.container);
+  const mark = leaf.querySelector('header + div > svg')!;
+  expect(mark.getAttribute('aria-hidden')).toBe('true');
+
+  const above = leaf.querySelector('header')!.getBoundingClientRect().bottom;
+  const below = screen
+    .getByText('Inside this issue')
+    .element()
+    .parentElement!.getBoundingClientRect().top;
+  const { top, bottom } = mark.getBoundingClientRect();
+  expect(bottom).toBeGreaterThan(top);
+  expect(top - above).toBeCloseTo(below - bottom, 0);
 });
 
 // This is the printed outside of the magazine. The contents is where the issue is
