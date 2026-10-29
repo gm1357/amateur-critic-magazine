@@ -7,7 +7,7 @@ export default function Cover() {
   return (
     <section className="flex flex-1 flex-col items-center justify-center gap-[4cqw] px-[10%] py-[8%] text-center">
       <p className="text-[1.7cqw] tracking-[0.2em] text-muted uppercase">{ISSUE}</p>
-      <Monogram className="w-[12cqw]" />
+      <Monogram className="w-[22cqw]" />
       <h1 className="font-heading text-[11cqw] leading-[0.95] tracking-[-0.03em] text-balance text-ink">
         {MAGAZINE_TITLE}
       </h1>

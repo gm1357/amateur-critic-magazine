@@ -31,10 +31,9 @@ test('cover prints the monogram between the issue number and the title', async (
   expect(mark.getAttribute('aria-hidden')).toBe('true');
   expect(mark.previousElementSibling!.textContent).toBe('Issue No. 1');
 
-  // Drawn at a size the eye can find, and square like the favicon it is drawn from.
-  const { width, height } = mark.getBoundingClientRect();
-  expect(width).toBeGreaterThan(0);
-  expect(height).toBeCloseTo(width, 0);
+  // Set large: a fifth of the cover's width, not an icon dropped onto it.
+  const leaf = mark.closest('.a4-leaf')!.getBoundingClientRect();
+  expect(mark.getBoundingClientRect().width).toBeGreaterThan(leaf.width / 5);
 });
 
 test('cover is page one and has nothing before it', async () => {

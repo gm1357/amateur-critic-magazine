@@ -1,5 +1,6 @@
-// The magazine's mark: the same drawing as `public/favicon.svg`, but coloured from the
-// palette rather than hard-coded, so it follows the page onto a printer.
+// The magazine's mark: the W and rule of `public/favicon.svg`, without the tile the icon
+// sits on — on a page the paper is the tile. Coloured from the palette rather than
+// hard-coded, so it follows the page onto a printer.
 //
 // It is sized by whoever places it, in the leaf's units — the drawing itself has no size.
 // It repeats the title it sits beside, so it is hidden from the accessibility tree.
@@ -13,8 +14,7 @@ const W =
 
 export default function Monogram({ className }: { className?: string }) {
   return (
-    <svg aria-hidden="true" className={className} viewBox="0 0 32 32">
-      <rect className="fill-paper stroke-rule" height="31" rx="6" width="31" x=".5" y=".5" />
+    <svg aria-hidden="true" className={className} viewBox="3 4.41 26 21.59">
       <path className="fill-ink" d={W} />
       <rect className="fill-accent" height="2" width="22" x="5" y="24" />
     </svg>
