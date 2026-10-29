@@ -2,7 +2,6 @@ import type { Review } from '../data/review';
 import { reviews, topReviews } from '../data/reviews';
 import { AUTHOR, ISSUE, MAGAZINE_TITLE, STRAPLINE } from '../magazine';
 import Barcode from './Barcode';
-import Monogram from './Monogram';
 import ScoreBadge from './ScoreBadge';
 
 // As many as fit the block without turning the back of the magazine into a second
@@ -46,13 +45,8 @@ export default function BackCover() {
       {/* The page is weighted to its ends — the strapline at the head, the teaser and the
           imprint together at the foot — so the paper's slack gathers in one place rather
           than opening a gap between every pair of blocks. That is the shape of a back
-          cover: a line to read across the room, and the small print along the bottom.
-          The monogram is set in that slack, centred in whatever of it the page has left. */}
-      <div className="flex flex-1 items-center justify-center py-[8%]">
-        <Monogram className="w-[18cqw]" />
-      </div>
-
-      <div className="flex flex-col gap-[7%]">
+          cover: a line to read across the room, and the small print along the bottom. */}
+      <div className="mt-auto flex flex-col gap-[7%] pt-[10%]">
         {highlights.length > 0 && (
           <div className="flex flex-col gap-[3%] bg-desk px-[6%] py-[5%]">
             <p className="text-[0.7em] tracking-[0.24em] text-accent uppercase">
