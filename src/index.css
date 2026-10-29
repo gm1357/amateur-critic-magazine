@@ -15,6 +15,11 @@
      below: it is the cut edge of a piece of card lying on the desk, and it is black on
      screen and on paper alike, the way `--color-curl` is. */
   --bookmark-edge: #0b0b0d;
+
+  /* The tables the magazine can lie on: the base tone of each wood, under its grain. */
+  --wood: #1e120a;
+  --oak: #c9a77c;
+  --light-desk: #e6e3de;
 }
 
 /* Paper is paper on a printer too — the dark palette would otherwise print as a black
@@ -35,6 +40,7 @@
   --font-heading: 'Iowan Old Style', Palatino, 'Book Antiqua', Georgia, serif;
   --color-paper: var(--paper);
   --color-desk: var(--desk);
+  --color-on-desk: var(--on-desk);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-rule: var(--rule);
@@ -111,6 +117,93 @@
   @media print {
     --leaf-w: 210mm;
     --leaves: 1;
+  }
+}
+
+/* What the magazine is lying on, chosen by the reader as `data-desk` on the desk. Every desk
+   is the same four layers — a pool of light where the magazine lies, the seams between
+   boards, the boards' differing tones, and the grain — and a plain desk simply has none of
+   them. The woods draw the grain with an SVG turbulence stretched along the board and the
+   rest with gradients, so there is no image to fetch and nothing to go blurry at any size.
+   All of this is off the paper, so it is sized in `rem` like the rest of the desk, never in
+   the leaf's units. A printer gets none of it: on paper the desk goes away.
+
+   `--on-desk` is the ink for whatever stands on the desk rather than on a page — the
+   picker, and the pager and zoom beside it — and `--desk-shadow` is the shadow the paper
+   casts onto it. */
+@utility desk-surface {
+  --board: 7.5rem;
+  --seam: 2px;
+
+  --surface: var(--desk);
+  --surface-light: none;
+  --surface-seams: none;
+  --surface-tones: none;
+  --surface-grain: none;
+  --on-desk: var(--muted);
+  --desk-shadow: rgb(0 0 0 / 0.5);
+
+  background-color: var(--surface);
+  background-image:
+    var(--surface-light), var(--surface-seams), var(--surface-tones), var(--surface-grain);
+  background-size:
+    100% 100%,
+    auto,
+    auto,
+    120rem 60rem;
+
+  /* A table made of boards: the layers every wood shares, each in its own colours. */
+  &[data-desk='walnut'],
+  &[data-desk='oak'] {
+    --surface-light: radial-gradient(
+      ellipse 80% 70% at 50% 45%,
+      transparent 35%,
+      var(--vignette) 100%
+    );
+    --surface-seams: repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--board) - var(--seam)),
+      var(--seam-color) calc(var(--board) - var(--seam)) var(--board)
+    );
+    --surface-tones: repeating-linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.025) 0 var(--board),
+      rgb(0 0 0 / 0.12) var(--board) calc(var(--board) * 2),
+      transparent calc(var(--board) * 2) calc(var(--board) * 3),
+      rgb(0 0 0 / 0.06) calc(var(--board) * 3) calc(var(--board) * 4)
+    );
+  }
+
+  /* Dark boards under light streaks, going dark towards the edges — which keeps the pager
+     legible where it stands. */
+  &[data-desk='walnut'] {
+    --surface: var(--wood);
+    --vignette: rgb(0 0 0 / 0.6);
+    --seam-color: rgb(0 0 0 / 0.55);
+    --surface-grain: url('./walnut-grain.svg');
+  }
+
+  /* Pale boards under dark streaks. The light falling off at the edges is much softer, or
+     a light table would look scorched; the chrome takes a dark ink to stand on it. */
+  &[data-desk='oak'] {
+    --surface: var(--oak);
+    --vignette: rgb(40 24 10 / 0.3);
+    --seam-color: rgb(60 35 15 / 0.35);
+    --surface-grain: url('./oak-grain.svg');
+    --on-desk: #3b2a1c;
+    --desk-shadow: rgb(30 18 8 / 0.35);
+  }
+
+  /* A plain light desk, the light counterpart of black: no boards and no grain, only a
+     dark ink for the chrome and a softer shadow under the paper. */
+  &[data-desk='light'] {
+    --surface: var(--light-desk);
+    --on-desk: #4b4b52;
+    --desk-shadow: rgb(0 0 0 / 0.25);
+  }
+
+  @media print {
+    background: var(--desk);
   }
 }
 

@@ -10,10 +10,6 @@ import { BACK_PATH, CONTENTS_PATH, reviewPath } from '../../src/pages';
 const DESK = { width: 1280, height: 800 };
 const viewport = { width: window.innerWidth, height: window.innerHeight };
 
-// A turn takes as long as it takes, and on a wide desk the verso is the half that changes
-// last: it is the paper coming down that these wait on.
-const LANDED = { timeout: 3000 };
-
 // A hover has to be re-offered until it takes, so this is a budget for several attempts.
 const REACHED = { timeout: 6000 };
 
@@ -52,7 +48,7 @@ async function readPastTheListing(container: HTMLElement, next: { click: () => P
     expect(bookmarkOf(container)).toBeNull();
 
     await next.click();
-    await expect.poll(() => versoOf(container), LANDED).not.toBe(verso);
+    await expect.poll(() => versoOf(container)).not.toBe(verso);
   }
 
   throw new Error('never read past the listing');
@@ -67,7 +63,7 @@ test('the cover and the listing are not marked a way back to themselves', async 
 
   await screen.getByRole('link', { name: 'Next' }).click();
 
-  await expect.poll(() => versoOf(screen.container), LANDED).toBe(CONTENTS_PATH);
+  await expect.poll(() => versoOf(screen.container)).toBe(CONTENTS_PATH);
   expect(bookmarkOf(screen.container)).toBeNull();
 });
 
@@ -94,7 +90,7 @@ test('pulling the ribbon turns back to the listing', async () => {
 
   // A turn like any other: the URL is what moves, and the leaf follows it.
   await expect.element(screen.getByRole('heading', { level: 1, name: 'Contents' })).toBeVisible();
-  await expect.poll(() => versoOf(screen.container), LANDED).toBe(CONTENTS_PATH);
+  await expect.poll(() => versoOf(screen.container)).toBe(CONTENTS_PATH);
   expect(bookmarkOf(screen.container)).toBeNull();
 });
 

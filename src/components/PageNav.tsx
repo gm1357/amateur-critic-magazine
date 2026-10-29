@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import type { Page } from '../pages';
 
-const linkClass = 'text-xs tracking-[0.16em] text-muted uppercase';
+const linkClass = 'text-xs tracking-[0.16em] text-on-desk uppercase';
 
 type PageNavProps = {
   previous: Page | undefined;
@@ -30,7 +30,7 @@ export default function PageNav({ previous, next, folio, total }: PageNavProps) 
         </span>
       )}
 
-      <p className="text-center text-xs tabular-nums text-muted">
+      <p className="text-center text-xs tabular-nums text-on-desk">
         {folio} / {total}
       </p>
 
