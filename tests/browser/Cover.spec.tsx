@@ -21,6 +21,22 @@ test('cover shows the magazine title and author', async () => {
   await expect.element(screen.getByText('by Gabriel Machado')).toBeVisible();
 });
 
+test('cover prints the monogram between the issue number and the title', async () => {
+  const screen = await renderCover();
+  const title = screen.getByRole('heading', { level: 1 });
+  await expect.element(title).toBeVisible();
+
+  const mark = title.element().previousElementSibling!;
+  expect(mark.tagName).toBe('svg');
+  expect(mark.getAttribute('aria-hidden')).toBe('true');
+  expect(mark.previousElementSibling!.textContent).toBe('Issue No. 1');
+
+  // Drawn at a size the eye can find, and square like the favicon it is drawn from.
+  const { width, height } = mark.getBoundingClientRect();
+  expect(width).toBeGreaterThan(0);
+  expect(height).toBeCloseTo(width, 0);
+});
+
 test('cover is page one and has nothing before it', async () => {
   const screen = await renderCover();
 
