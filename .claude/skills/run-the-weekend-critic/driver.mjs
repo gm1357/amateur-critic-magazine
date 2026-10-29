@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Headless-Chromium driver for Amateur Critic Magazine.
+// Headless-Chromium driver for The Weekend Critic.
 //
 // Reads one command per line on stdin, so it works both piped (heredoc) and
 // interactively under tmux. Prints `ok` after every command and `DRIVER READY`
 // once the browser is up — poll for those rather than sleeping.
 //
-//   node .claude/skills/run-amateur-critic-magazine/driver.mjs <<'EOF'
+//   node .claude/skills/run-the-weekend-critic/driver.mjs <<'EOF'
 //   nav /
 //   shot cover
 //   EOF
@@ -18,8 +18,8 @@ import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium, firefox } from 'playwright';
 
-const BASE = process.env.ACM_BASE ?? 'http://localhost:5173';
-const SHOTS = resolve(process.env.ACM_SHOTS ?? '/tmp/acm-shots');
+const BASE = process.env.TWC_BASE ?? 'http://localhost:5173';
+const SHOTS = resolve(process.env.TWC_SHOTS ?? '/tmp/twc-shots');
 // 414x896 matches vitest.browser.config.ts, so the driver reads the issue the
 // same way the browser suite does: one leaf at a time, below the 64rem spread
 // breakpoint in src/useMode.ts.
@@ -27,7 +27,7 @@ const START = { width: 414, height: 896 };
 
 mkdirSync(SHOTS, { recursive: true });
 
-const browserName = process.env.ACM_BROWSER ?? 'chromium';
+const browserName = process.env.TWC_BROWSER ?? 'chromium';
 const launcher = browserName === 'firefox' ? firefox : chromium;
 const browser = await launcher.launch({ args: browserName === 'chromium' ? ['--no-sandbox'] : [] });
 const context = await browser.newContext({ viewport: START });
@@ -150,7 +150,7 @@ const commands = {
     return kind;
   },
   async pdf(name = 'issue') {
-    if (browserName !== 'chromium') throw new Error('pdf needs ACM_BROWSER=chromium');
+    if (browserName !== 'chromium') throw new Error('pdf needs TWC_BROWSER=chromium');
     const file = `${SHOTS}/${name}.pdf`;
     await page.pdf({ path: file, format: 'A4', printBackground: true });
     return file;

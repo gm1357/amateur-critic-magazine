@@ -58,7 +58,7 @@ test('the cover and the listing are not marked a way back to themselves', async 
   const screen = await renderAt('/');
   await expect
     .element(screen.getByRole('heading', { level: 1 }))
-    .toHaveTextContent('Amateur Critic Magazine');
+    .toHaveTextContent('The Weekend Critic');
   expect(bookmarkOf(screen.container)).toBeNull();
 
   await screen.getByRole('link', { name: 'Next' }).click();

@@ -77,7 +77,7 @@ test('the left arrow key turns back to the cover', async () => {
 
   await expect
     .element(screen.getByRole('heading', { level: 1 }))
-    .toHaveTextContent('Amateur Critic Magazine');
+    .toHaveTextContent('The Weekend Critic');
   await expect.poll(() => folioOf(screen.container)).toBe('1');
 });
 
@@ -99,6 +99,6 @@ test('paging forward from the back cover does nothing', async () => {
 
   await expect
     .element(screen.getByRole('heading', { level: 1 }))
-    .toHaveTextContent('Amateur Critic Magazine');
+    .toHaveTextContent('The Weekend Critic');
   expect(folioOf(screen.container)).toBe(String(total));
 });

@@ -1,4 +1,4 @@
-# Amateur Critic Magazine
+# The Weekend Critic
 
 A movie-review aggregator that reads like a print magazine. You land on the cover, then the contents and an introduction; every page after that is one review. Page through with the Prev/Next links, the left and right arrow keys, or by linking straight to a review.
 

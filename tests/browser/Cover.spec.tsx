@@ -17,7 +17,7 @@ test('cover shows the magazine title and author', async () => {
 
   await expect
     .element(screen.getByRole('heading', { level: 1 }))
-    .toHaveTextContent('Amateur Critic Magazine');
+    .toHaveTextContent('The Weekend Critic');
   await expect.element(screen.getByText('by Gabriel Machado')).toBeVisible();
 });
 
