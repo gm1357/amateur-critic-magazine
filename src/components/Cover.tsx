@@ -9,7 +9,7 @@ export default function Cover() {
       {/* A watermark: centred on the paper and out of flow, so the type sits exactly where
           it would without it. Below zero in the leaf's stacking context is above the paper
           and under everything printed on it — the same layer a review's film still takes. */}
-      <Monogram className="pointer-events-none absolute inset-0 -z-1 m-auto w-[64cqw] opacity-[0.12]" />
+      <Monogram className="pointer-events-none absolute inset-0 -z-1 m-auto w-[74cqw] opacity-[0.12]" />
       <p className="text-[1.7cqw] tracking-[0.2em] text-muted uppercase">{ISSUE}</p>
       <h1 className="font-heading text-[11cqw] leading-[0.95] tracking-[-0.03em] text-balance text-ink">
         {MAGAZINE_TITLE}
