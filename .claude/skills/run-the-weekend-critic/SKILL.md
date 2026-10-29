@@ -1,11 +1,11 @@
 ---
-name: run-amateur-critic-magazine
-description: Build, run, screenshot and drive the Amateur Critic Magazine app. Use when asked to start the dev server, run or build the magazine, take a screenshot of a page, spread or page turn, check the print/PDF output, or interact with the running app rather than only its tests.
+name: run-the-weekend-critic
+description: Build, run, screenshot and drive The Weekend Critic app. Use when asked to start the dev server, run or build the magazine, take a screenshot of a page, spread or page turn, check the print/PDF output, or interact with the running app rather than only its tests.
 ---
 
 A Vite + React 19 single-page app that renders a movie-review issue as a printed
 magazine. There is no `chromium-cli` in this container, so the harness is
-`.claude/skills/run-amateur-critic-magazine/driver.mjs` — a line-oriented
+`.claude/skills/run-the-weekend-critic/driver.mjs` — a line-oriented
 Playwright driver that reads commands on stdin. Start the dev server, pipe it a
 script (or drive it under tmux), and it navigates, turns pages by dragging the
 paper, screenshots, and prints to PDF.
@@ -31,7 +31,7 @@ resolution work). Copying it to `/tmp` gives `ERR_MODULE_NOT_FOUND`.
 ### 1. Start the dev server
 
 ```bash
-npm run dev > /tmp/acm-dev.log 2>&1 &
+npm run dev > /tmp/twc-dev.log 2>&1 &
 timeout 40 bash -c 'until curl -sf http://localhost:5173 >/dev/null; do sleep 0.5; done'
 ```
 
@@ -45,7 +45,7 @@ lsof -ti:5173 -sTCP:LISTEN | xargs -r kill
 ### 2. Drive it
 
 ```bash
-node .claude/skills/run-amateur-critic-magazine/driver.mjs <<'EOF'
+node .claude/skills/run-the-weekend-critic/driver.mjs <<'EOF'
 nav /
 state
 drag forward 1
@@ -60,7 +60,7 @@ EOF
 
 Every command prints its result then `ok` (or `err <message>`); startup prints
 `DRIVER READY <browser> <base> shots=<dir>`. Screenshots and PDFs land in
-`/tmp/acm-shots/`, numbered in order (`01-spread.png`); the counter resets each
+`/tmp/twc-shots/`, numbered in order (`01-spread.png`); the counter resets each
 run, so a rerun overwrites.
 
 | command                               | what it does                                                                                                                                                  |
@@ -68,7 +68,7 @@ run, so a rerun overwrites.
 | `nav <path>`                          | Go to `http://localhost:5173<path>` and wait for React to mount                                                                                               |
 | `state`                               | The one-line proof of where you are: URL, mode, **which pages are on the desk** (`leaves=[…]`, read off each leaf's `data-page`), and the pager's folio range |
 | `size <w> <h>`                        | Resize; prints the resulting `mode`. Crossing 1024px flips `single` ⇄ `spread`                                                                                |
-| `shot [name]`                         | Full-page screenshot → `/tmp/acm-shots/NN-name.png`                                                                                                           |
+| `shot [name]`                         | Full-page screenshot → `/tmp/twc-shots/NN-name.png`                                                                                                           |
 | `turnshot <dir> <progress> [name]`    | Hold a leaf mid-air at `progress` of its arc, screenshot the 3D turn, then let go                                                                             |
 | `drag <forward\|backward> [progress]` | Turn a page by dragging the paper edge. `progress` is a fraction of a whole turn: `1` completes it, `0.3` falls back                                          |
 | `key <Key>`                           | Press a key on `body` — `ArrowRight` / `ArrowLeft` page the issue                                                                                             |
@@ -77,12 +77,12 @@ run, so a rerun overwrites.
 | `text <selector>`                     | `innerText` of the first match, newlines flattened to `\|`                                                                                                    |
 | `eval <js>`                           | Evaluate in the page, JSON-stringified result                                                                                                                 |
 | `media <print\|screen>`               | Re-render under the print palette (or back)                                                                                                                   |
-| `pdf [name]`                          | Print the whole issue to A4 → `/tmp/acm-shots/<name>.pdf` (chromium only)                                                                                     |
+| `pdf [name]`                          | Print the whole issue to A4 → `/tmp/twc-shots/<name>.pdf` (chromium only)                                                                                     |
 | `errors`                              | Console errors + uncaught page errors collected so far                                                                                                        |
 | `url`, `quit`                         | —                                                                                                                                                             |
 
-Env: `ACM_BASE` (default `http://localhost:5173`), `ACM_BROWSER`
-(`chromium` | `firefox`, default chromium), `ACM_SHOTS` (default `/tmp/acm-shots`).
+Env: `TWC_BASE` (default `http://localhost:5173`), `TWC_BROWSER`
+(`chromium` | `firefox`, default chromium), `TWC_SHOTS` (default `/tmp/twc-shots`).
 The driver opens at 414×896 — the same viewport `vitest.browser.config.ts`
 pins — so it reads the issue one leaf at a time until you `size` it wider.
 
@@ -90,7 +90,7 @@ Both browsers the test suite uses work; Firefox is the one that historically
 broke on the 3D turn, so re-run a flip change there too:
 
 ```bash
-ACM_BROWSER=firefox node .claude/skills/run-amateur-critic-magazine/driver.mjs <<'EOF'
+TWC_BROWSER=firefox node .claude/skills/run-the-weekend-critic/driver.mjs <<'EOF'
 nav /
 drag forward 1
 state
@@ -101,13 +101,13 @@ EOF
 ### 3. Interactive (tmux)
 
 ```bash
-tmux new-session -d -s acm -x 200 -y 50 -c "$PWD"
-tmux send-keys -t acm 'node .claude/skills/run-amateur-critic-magazine/driver.mjs' Enter
-timeout 30 bash -c 'until tmux capture-pane -pt acm | grep -q "DRIVER READY"; do sleep 0.2; done'
-tmux send-keys -t acm 'nav /contents' Enter
-tmux send-keys -t acm 'click a[href="/reviews/wake-up-dead-man"]' Enter
-tmux send-keys -t acm 'state' Enter
-tmux capture-pane -pt acm -S -200 | grep -v '^$' | tail -20
+tmux new-session -d -s twc -x 200 -y 50 -c "$PWD"
+tmux send-keys -t twc 'node .claude/skills/run-the-weekend-critic/driver.mjs' Enter
+timeout 30 bash -c 'until tmux capture-pane -pt twc | grep -q "DRIVER READY"; do sleep 0.2; done'
+tmux send-keys -t twc 'nav /contents' Enter
+tmux send-keys -t twc 'click a[href="/reviews/wake-up-dead-man"]' Enter
+tmux send-keys -t twc 'state' Enter
+tmux capture-pane -pt twc -S -200 | grep -v '^$' | tail -20
 ```
 
 ### The URLs
@@ -124,7 +124,7 @@ renders a bare leaf with no `data-page`, no running head and no pager, so
 npm run build                     # tsc -b && vite build -> dist/
 npm run preview &                 # :4173
 timeout 30 bash -c 'until curl -sf http://localhost:4173 >/dev/null; do sleep 0.5; done'
-ACM_BASE=http://localhost:4173 node .claude/skills/run-amateur-critic-magazine/driver.mjs <<'EOF'
+TWC_BASE=http://localhost:4173 node .claude/skills/run-the-weekend-critic/driver.mjs <<'EOF'
 nav /reviews/the-drama
 state
 EOF
@@ -191,10 +191,10 @@ globs the whole repo including `.claude/`, so run `npm run fmt` after editing
   a dev server is already running and vite silently moved. The driver still
   points at 5173 and drives the _old_ server. Kill the listener
   (`lsof -ti:5173 -sTCP:LISTEN | xargs -r kill`) before relaunching, or pass
-  `ACM_BASE=http://localhost:5174`.
+  `TWC_BASE=http://localhost:5174`.
 - **`err no .magazine-book on the page`**: the URL is not a page of the issue
   (the 404 renders a bare leaf without the book), or `nav` was never run.
-- **`err pdf needs ACM_BROWSER=chromium`**: `page.pdf()` is chromium-only.
+- **`err pdf needs TWC_BROWSER=chromium`**: `page.pdf()` is chromium-only.
 - **A drag "did nothing" (`state` unchanged)**: check `progress` — see the
   0.5 gotcha above — and that the leaf you grabbed exists: there is no backward
   turn on the cover and no forward turn on the last page.

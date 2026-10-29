@@ -106,7 +106,7 @@ test('turning back closes the book onto the cover', async () => {
 
   await expect.poll(() => book.getAttribute('data-spread')).toBe('0');
   await expect
-    .element(screen.getByRole('heading', { level: 1, name: 'Amateur Critic Magazine' }))
+    .element(screen.getByRole('heading', { level: 1, name: 'The Weekend Critic' }))
     .toBeVisible();
 });
 
