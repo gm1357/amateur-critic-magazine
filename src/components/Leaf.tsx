@@ -5,6 +5,12 @@ import { findPageNumber, type Page } from '../pages';
 import PageContent from './PageContent';
 import ReviewFrame from './ReviewFrame';
 
+// Clipped on both axes. A leaf in the air projects well past the book under perspective,
+// and nothing on the desk is ever meant to scroll the page: overflow reaching the document
+// grew it a scrollbar mid-turn, which narrowed the desk and typeset the issue again.
+export const DESK =
+  'magazine-desk flex min-h-svh flex-col items-center justify-center overflow-clip desk-surface p-(--sheet-gutter) print:block print:p-0';
+
 // Each leaf is its own sheet of paper — its own border, its own shadow, its own running
 // head and folio. That is how a magazine is actually printed, and it is what lets a leaf
 // carry its chrome with it when it turns.
