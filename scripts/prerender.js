@@ -30,4 +30,6 @@ for (const page of pages) {
   await writeFile(file, html);
 }
 
+// Still the empty shell, so the magazine draws its own missing page under a real 404.
+await writeFile('dist/404.html', shell);
 await writeFile('dist/sitemap.xml', sitemap());

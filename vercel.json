@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/reviews/:slug/:part(\\d+)", "destination": "/reviews/:slug.html" },
+    { "source": "/contents/:part(\\d+)", "destination": "/contents.html" },
+    { "source": "/introduction/:part(\\d+)", "destination": "/introduction.html" }
+  ]
 }
