@@ -18,6 +18,7 @@ A movie-review aggregator that reads like a print magazine.
 ```
 nvm use
 npm install
+npx playwright install   # browsers for the browser tests
 
 npm run dev        # dev server
 npm run check      # format, types, lint
