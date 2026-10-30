@@ -23,8 +23,8 @@ export default function Introduction() {
           come up with a personal blog to put those reviews in became appealing, and so the idea to
           put this in the format of a virtual magazine was born. With this website, I marry my
           passion for cinema with my skills in web development, creating an engaging platform for
-          sharing my thoughts and reviews. As a disclaimer, the writtings here are all pesonally
-          written, without the assistence of AI. The code in the other hand, is a mix of AI assisted
+          sharing my thoughts and reviews. As a disclaimer, the writings here are all personally
+          written, without the assistance of AI. The code in the other hand, is a mix of AI assisted
           code generation and my knowledge guiding it.
         </p>
         <p>
@@ -39,7 +39,7 @@ export default function Introduction() {
         <p>
           <strong>Why read this?</strong> I Won't lie and say that this could be used as a curated
           guide for movies to watch, the films put here are the ones I'm watching without rhyme or
-          reason, someetimes I stumble upon good ones, and sometimes not. But, with that in mind, I
+          reason, sometimes I stumble upon good ones, and sometimes not. But, with that in mind, I
           hope that you at least go through some pages, read some reviews, and maybe even find
           something that resonates with you.
         </p>
