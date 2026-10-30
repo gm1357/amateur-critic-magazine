@@ -67,6 +67,23 @@ test('the contents links to every review', () => {
   }
 });
 
+test('a review carries its data as JSON the page cannot break out of', () => {
+  const [review] = reviews;
+  const html = renderPage(SHELL, pageAt(reviewPath(review.slug)));
+  const [, json] = /<script type="application\/ld\+json">(.*?)<\/script>/.exec(html)!;
+
+  expect(json).not.toContain('<');
+  expect(JSON.parse(json)['@type']).toBe('Review');
+  expect(html.indexOf('application/ld+json')).toBeLessThan(html.indexOf('</head>'));
+});
+
+test('the data is left in place when the client clears the printed head', () => {
+  const [review] = reviews;
+  const html = renderPage(SHELL, pageAt(reviewPath(review.slug)));
+
+  expect(html).not.toMatch(/<script[^>]*data-printed/);
+});
+
 test('a shell with nowhere to print is a failed build', () => {
   expect(() => renderPage('<html></html>', pageAt('/'))).toThrow('The HTML shell has no');
 });

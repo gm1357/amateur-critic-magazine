@@ -5,7 +5,7 @@ import PageHead from './components/PageHead';
 import { reviews } from './data/reviews';
 import { DEFAULT_DESK } from './desk';
 import { articles, type Page, pages } from './pages';
-import { headOf, sitemapOf } from './seo';
+import { headOf, jsonLdOf, sitemapOf } from './seo';
 
 export { pages };
 
@@ -43,8 +43,18 @@ function markPrinted(head: string): string {
   return head.replace(/<(title|meta|link)\b/g, '<$1 data-printed');
 }
 
+// Review text is copy rather than code, and `</script>` in it would end the block early.
+function dataScript(page: Page): string {
+  const data = jsonLdOf(page.article);
+  if (!data) return '';
+
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  return `<script type="application/ld+json">${json}</script>`;
+}
+
 export function renderPage(shell: string, page: Page): string {
-  const head = markPrinted(renderToStaticMarkup(<PageHead head={headOf(page.article)} />));
+  const head =
+    markPrinted(renderToStaticMarkup(<PageHead head={headOf(page.article)} />)) + dataScript(page);
   const body = renderToStaticMarkup(staticPage(page));
 
   return printInto(

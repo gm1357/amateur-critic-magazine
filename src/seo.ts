@@ -75,6 +75,10 @@ export function excerptOf(text: string): string {
   return `${cut.slice(0, cut.lastIndexOf(' ')).replace(/[\s,;:.]+$/, '')}…`;
 }
 
+function filmOf(review: Review): string {
+  return review.year ? `${review.movie} (${review.year})` : review.movie;
+}
+
 function reviewHead(article: Article, review: Review): Head {
   const frame = frameOf(review.slug);
 
@@ -84,7 +88,7 @@ function reviewHead(article: Article, review: Review): Head {
     image: frame && absolute(frame),
     noindex: false,
     published: review.date,
-    title: `${review.movie} review: ${review.score}/10 · ${MAGAZINE_TITLE}`,
+    title: `${filmOf(review)} review: ${review.score}/10 · ${MAGAZINE_TITLE}`,
   };
 }
 
@@ -132,4 +136,54 @@ export function headOf(article: Article): Head {
         title: `${article.label} · ${MAGAZINE_TITLE}`,
       };
   }
+}
+
+const AUTHOR_PERSON = { '@type': 'Person', name: AUTHOR };
+
+function reviewData(article: Article, review: Review): object {
+  const frame = frameOf(review.slug);
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Review',
+    author: AUTHOR_PERSON,
+    datePublished: review.date,
+    itemReviewed: {
+      '@type': 'Movie',
+      ...(review.year && { datePublished: String(review.year) }),
+      ...(frame && { image: absolute(frame) }),
+      name: review.movie,
+    },
+    name: `${review.movie} review`,
+    publisher: { '@type': 'Organization', name: MAGAZINE_TITLE, url: SITE_URL },
+    reviewBody: review.text,
+    // Spelled out because a rating without its scale is read as out of five.
+    reviewRating: {
+      '@type': 'Rating',
+      bestRating: 10,
+      ratingValue: review.score,
+      worstRating: 1,
+    },
+    url: absolute(article.path),
+  };
+}
+
+// What the page is, for a crawler that wants it as data. Not part of `PageHead`: React leaves
+// an inline script where it is rendered, so the magazine would add a second copy in the body.
+export function jsonLdOf(article: Article): object | undefined {
+  if (article.kind === 'cover') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      author: AUTHOR_PERSON,
+      description: COVER_DESCRIPTION,
+      name: MAGAZINE_TITLE,
+      url: SITE_URL,
+    };
+  }
+  if (article.kind === 'review') {
+    const review = findReview(article.slug);
+    return review && reviewData(article, review);
+  }
+  return undefined;
 }

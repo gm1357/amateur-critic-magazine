@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import type { Review } from '../../src/data/review';
 import { reviews } from '../../src/data/reviews';
 import { articles, BACK_PATH, buildArticles, pages } from '../../src/pages';
-import { excerptOf, headOf, sitemapOf } from '../../src/seo';
+import { excerptOf, headOf, jsonLdOf, sitemapOf } from '../../src/seo';
 
 function reviewOf(slug: string, date: string): Review {
   return { slug, movie: slug, score: 5, date, hearted: false, text: 'Body.' };
@@ -74,7 +74,9 @@ test('a review is headed with its film, its verdict and its still', () => {
   const [review] = reviews;
   const head = headOf(articleAt(`/reviews/${review.slug}`));
 
-  expect(head.title).toBe(`${review.movie} review: ${review.score}/10 · The Weekend Critic`);
+  expect(head.title).toBe(
+    `${review.movie} (${review.year}) review: ${review.score}/10 · The Weekend Critic`,
+  );
   expect(head.canonical).toBe(`https://weekendcritic.com/reviews/${review.slug}`);
   expect(head.description).toBe(excerptOf(review.text));
   expect(head.published).toBe(review.date);
@@ -103,4 +105,35 @@ test('a review that is not in the issue has no head to give', () => {
   expect(() =>
     headOf({ path: '/reviews/nope', label: 'Nope', kind: 'review', slug: 'nope' }),
   ).toThrow('nope');
+});
+
+test('every review says which year its film is from', () => {
+  expect(reviews.filter((review) => review.year === undefined)).toEqual([]);
+});
+
+test('a review is described as a rated review of a film', () => {
+  const [review] = reviews;
+  const data = jsonLdOf(articleAt(`/reviews/${review.slug}`));
+
+  expect(data).toMatchObject({
+    '@type': 'Review',
+    author: { '@type': 'Person', name: 'Gabriel Machado' },
+    datePublished: review.date,
+    itemReviewed: { '@type': 'Movie', name: review.movie, datePublished: String(review.year) },
+    reviewBody: review.text,
+    reviewRating: { bestRating: 10, ratingValue: review.score, worstRating: 1 },
+    url: `https://weekendcritic.com/reviews/${review.slug}`,
+  });
+});
+
+test('the cover is described as the site', () => {
+  expect(jsonLdOf(articleAt('/'))).toMatchObject({
+    '@type': 'WebSite',
+    url: 'https://weekendcritic.com',
+  });
+});
+
+test('pages that are not a review or the cover carry no data', () => {
+  expect(jsonLdOf(articleAt('/contents'))).toBeUndefined();
+  expect(jsonLdOf(articleAt(BACK_PATH))).toBeUndefined();
 });
