@@ -4,7 +4,7 @@ description: Build, run, screenshot and drive The Weekend Critic app. Use when a
 ---
 
 A Vite + React 19 single-page app that renders a movie-review issue as a printed
-magazine. There is no `chromium-cli` in this container, so the harness is
+magazine. The harness is
 `.claude/skills/run-the-weekend-critic/driver.mjs` — a line-oriented
 Playwright driver that reads commands on stdin. Start the dev server, pipe it a
 script (or drive it under tmux), and it navigates, turns pages by dragging the
@@ -14,12 +14,13 @@ All paths below are relative to the repo root.
 
 ## Prerequisites
 
-Nothing to `apt-get`. Node 24 (`.nvmrc`) and `npm ci` are the whole setup —
-Playwright and its browsers come in with `@vitest/browser-playwright`, which the
-browser test suite already depends on:
+Node 24 (`.nvmrc`). Playwright comes in with `@vitest/browser-playwright`, which
+the browser test suite already depends on, but `npm ci` does not download its
+browsers, so that is a separate step:
 
 ```bash
 npm ci
+npx playwright install
 ```
 
 The driver imports `playwright` by bare specifier, so it **must be run from
@@ -113,8 +114,9 @@ tmux capture-pane -pt twc -S -200 | grep -v '^$' | tail -20
 ### The URLs
 
 `/` cover, `/contents`, `/introduction`, then `/reviews/<slug>` for each JSON file in
-`src/data/reviews/` (`the-celebration`, `nirvana-band-show-movie`, `the-drama`,
-`wake-up-dead-man`), ordered by their `date`. Anything else is the 404 — which
+`src/data/reviews/` (for example `the-drama` or `wake-up-dead-man`), ordered by
+their `date`. A review that runs long continues at `/reviews/<slug>/2`. Anything
+else is the 404 — which
 renders a bare leaf with no `data-page`, no running head and no pager, so
 `state` reports `leaves=[] nav=(none)`.
 
@@ -131,23 +133,23 @@ EOF
 lsof -ti:4173 -sTCP:LISTEN | xargs -r kill
 ```
 
-`vite preview` serves the SPA fallback, so deep links return 200. A dumb static
-host would 404 them — that is a deploy concern, not a bug here.
+`vite preview` serves the SPA fallback, so deep links return 200. Production does
+the same through the rewrite in `vercel.json`.
 
 ## Run (human path)
 
-`npm run dev`, open <http://localhost:5173>. Page with the Prev/Next links, the
+`npm run dev`, open <http://localhost:5173>. Page with the Previous/Next links, the
 arrow keys, or by dragging the page edge. Useless headless.
 
 ## Test / check
 
 ```bash
 npm run check        # oxfmt --check, tsc -b --noEmit, oxlint
-npm run test:unit    # 4 files, 53 tests, ~0.2s
-npm run test:browser # 18 files, 116 tests, chromium + firefox, ~13s
+npm run test:unit
+npm run test:browser # chromium + firefox
 ```
 
-All green as of this writing. `npm run check` **lints the driver too** — oxfmt
+`npm run check` **lints the driver too** — oxfmt
 globs the whole repo including `.claude/`, so run `npm run fmt` after editing
 `driver.mjs` or `check` fails on it.
 
@@ -181,6 +183,8 @@ globs the whole repo including `.claude/`, so run `npm run fmt` after editing
   `-S -200 | grep -v '^$' | tail -20`.
 - **Screenshots are quiet about failure.** A blank-looking page still screenshots
   fine; finish every script with `errors`.
+- **There is no zoom command.** Use the pager's buttons:
+  `click [aria-label="Zoom in"]`.
 
 ## Troubleshooting
 
