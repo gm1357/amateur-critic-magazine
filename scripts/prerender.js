@@ -1,6 +1,6 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { pages, renderPage, sitemap } from '../dist-ssr/entry-server.js';
+import { feed, pages, renderPage, sitemap } from '../dist-ssr/entry-server.js';
 
 const shell = await readFile('dist/index.html', 'utf8');
 
@@ -33,3 +33,4 @@ for (const page of pages) {
 // Still the empty shell, so the magazine draws its own missing page under a real 404.
 await writeFile('dist/404.html', shell);
 await writeFile('dist/sitemap.xml', sitemap());
+await writeFile('dist/feed.xml', feed());

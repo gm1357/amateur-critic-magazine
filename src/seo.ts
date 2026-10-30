@@ -2,7 +2,7 @@ import { frameOf } from './data/frames';
 import type { Review } from './data/review';
 import { findReview } from './data/reviews';
 import { AUTHOR, MAGAZINE_TITLE, SITE_URL } from './magazine';
-import type { Article } from './pages';
+import { type Article, reviewPath } from './pages';
 
 function absolute(path: string): string {
   return `${SITE_URL}${path === '/' ? '' : path}`;
@@ -190,4 +190,42 @@ export function jsonLdOf(article: Article): object | undefined {
     return review && reviewData(article, review);
   }
   return undefined;
+}
+
+function escaped(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function feedItem(review: Review): string {
+  const link = absolute(reviewPath(review.slug));
+
+  return [
+    '    <item>',
+    `      <title>${escaped(`${filmOf(review)} review`)}</title>`,
+    `      <link>${link}</link>`,
+    `      <guid>${link}</guid>`,
+    `      <pubDate>${new Date(review.date).toUTCString()}</pubDate>`,
+    `      <description>${escaped(excerptOf(review.text))}</description>`,
+    '    </item>',
+  ].join('\n');
+}
+
+// Newest first, which is the reverse of the issue: a feed is read from the top, and a magazine
+// from the front.
+export function feedOf(issue: Review[]): string {
+  const newest = issue.toSorted((a, b) => b.date.localeCompare(a.date));
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<rss version="2.0">',
+    '  <channel>',
+    `    <title>${escaped(MAGAZINE_TITLE)}</title>`,
+    `    <link>${SITE_URL}</link>`,
+    `    <description>${escaped(COVER_DESCRIPTION)}</description>`,
+    '    <language>en</language>',
+    ...newest.map(feedItem),
+    '  </channel>',
+    '</rss>',
+    '',
+  ].join('\n');
 }

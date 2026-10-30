@@ -5,7 +5,7 @@ import PageHead from './components/PageHead';
 import { reviews } from './data/reviews';
 import { DEFAULT_DESK } from './desk';
 import { articles, type Page, pages } from './pages';
-import { headOf, jsonLdOf, sitemapOf } from './seo';
+import { feedOf, headOf, jsonLdOf, sitemapOf } from './seo';
 
 export { pages };
 
@@ -14,6 +14,10 @@ export { pages };
 // only exist there.
 export function sitemap(): string {
   return sitemapOf(articles, reviews);
+}
+
+export function feed(): string {
+  return feedOf(reviews);
 }
 
 // One leaf on the desk, the shape the magazine draws a missing page in. Every length on it is

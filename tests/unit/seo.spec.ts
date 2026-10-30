@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import type { Review } from '../../src/data/review';
 import { reviews } from '../../src/data/reviews';
 import { articles, BACK_PATH, buildArticles, pages } from '../../src/pages';
-import { excerptOf, headOf, jsonLdOf, sitemapOf } from '../../src/seo';
+import { excerptOf, feedOf, headOf, jsonLdOf, sitemapOf } from '../../src/seo';
 
 function reviewOf(slug: string, date: string): Review {
   return { slug, movie: slug, score: 5, date, hearted: false, text: 'Body.' };
@@ -142,4 +142,31 @@ test('the cover is described as the site', () => {
 test('pages that are not a review or the cover carry no data', () => {
   expect(jsonLdOf(articleAt('/contents'))).toBeUndefined();
   expect(jsonLdOf(articleAt(BACK_PATH))).toBeUndefined();
+});
+
+test('the feed runs newest first', () => {
+  const feed = feedOf(issue);
+
+  expect(feed.indexOf('/reviews/newer')).toBeLessThan(feed.indexOf('/reviews/older'));
+});
+
+test('the feed carries every review', () => {
+  expect(feedOf(reviews).match(/<item>/g)).toHaveLength(reviews.length);
+});
+
+test('a feed entry names its film and dates its review in the RSS format', () => {
+  const feed = feedOf([{ ...reviewOf('heat', '2026-01-14'), movie: 'Heat', year: 1995 }]);
+
+  expect(feed).toContain('<title>Heat (1995) review</title>');
+  expect(feed).toContain('<link>https://weekendcritic.com/reviews/heat</link>');
+  expect(feed).toContain('<pubDate>Wed, 14 Jan 2026 00:00:00 GMT</pubDate>');
+});
+
+test('the feed escapes what would break the XML', () => {
+  const feed = feedOf([
+    { ...reviewOf('heat', '2026-01-14'), movie: 'Tom & Jerry', text: 'Better <than> most.' },
+  ]);
+
+  expect(feed).toContain('<title>Tom &amp; Jerry review</title>');
+  expect(feed).toContain('<description>Better &lt;than&gt; most.</description>');
 });
