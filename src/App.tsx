@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router';
+import { Analytics } from '@vercel/analytics/react';
 import Magazine from './components/Magazine';
 
 // One route, because `src/pages.ts` is the issue's URL contract: it maps a pathname to a
@@ -7,8 +8,11 @@ import Magazine from './components/Magazine';
 // *not* pointing at — which is most of what the magazine puts on screen.
 export default function App() {
   return (
-    <Routes>
-      <Route element={<Magazine />} path="*" />
-    </Routes>
+    <>
+      <Routes>
+        <Route element={<Magazine />} path="*" />
+      </Routes>
+      <Analytics />
+    </>
   );
 }
