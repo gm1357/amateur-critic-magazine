@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import Magazine from './components/Magazine';
 
 // One route, because `src/pages.ts` is the issue's URL contract: it maps a pathname to a
@@ -13,6 +14,7 @@ export default function App() {
         <Route element={<Magazine />} path="*" />
       </Routes>
       <Analytics />
+      <SpeedInsights />
     </>
   );
 }
