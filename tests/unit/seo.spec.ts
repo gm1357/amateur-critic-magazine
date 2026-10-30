@@ -91,6 +91,12 @@ test('the cover is canonical at the bare domain', () => {
   expect(head.title).toBe('The Weekend Critic: movie reviews by Gabriel Machado');
 });
 
+test('pages without a still of their own share the cover image', () => {
+  for (const path of ['/', '/contents', '/introduction']) {
+    expect(headOf(articleAt(path)).image).toBe('https://weekendcritic.com/og-cover.jpg');
+  }
+});
+
 test('the back cover is kept out of the index', () => {
   expect(headOf(articleAt(BACK_PATH)).noindex).toBe(true);
 });

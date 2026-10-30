@@ -60,6 +60,7 @@ export type Head = {
 };
 
 const DESCRIPTION_LENGTH = 155;
+const COVER_IMAGE = absolute('/og-cover.jpg');
 const COVER_DESCRIPTION = `Movie reviews by ${AUTHOR}, set as a magazine you can page through.`;
 
 // The opening of a review stands in for it in a search result, cut on a word so a snippet
@@ -85,7 +86,7 @@ function reviewHead(article: Article, review: Review): Head {
   return {
     canonical: absolute(article.path),
     description: excerptOf(review.text),
-    image: frame && absolute(frame),
+    image: frame ? absolute(frame) : COVER_IMAGE,
     noindex: false,
     published: review.date,
     title: `${filmOf(review)} review: ${review.score}/10 · ${MAGAZINE_TITLE}`,
@@ -102,6 +103,7 @@ export function headOf(article: Article): Head {
       return {
         canonical,
         description: COVER_DESCRIPTION,
+        image: COVER_IMAGE,
         noindex: false,
         title: `${MAGAZINE_TITLE}: movie reviews by ${AUTHOR}`,
       };
@@ -109,6 +111,7 @@ export function headOf(article: Article): Head {
       return {
         canonical,
         description: `Every movie reviewed in ${MAGAZINE_TITLE}, in the order they were published.`,
+        image: COVER_IMAGE,
         noindex: false,
         title: `Contents · ${MAGAZINE_TITLE}`,
       };
@@ -116,6 +119,7 @@ export function headOf(article: Article): Head {
       return {
         canonical,
         description: `What ${MAGAZINE_TITLE} is, who writes it, and why it is a virtual magazine.`,
+        image: COVER_IMAGE,
         noindex: false,
         title: `Introduction · ${MAGAZINE_TITLE}`,
       };

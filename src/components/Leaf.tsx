@@ -69,7 +69,7 @@ export default function Leaf({ onParts, page, silent }: LeafProps) {
         <p className="mt-auto pb-[3%] text-center text-[1.5cqw] tabular-nums text-muted">{folio}</p>
       )}
 
-      {frame && <ReviewFrame src={frame} />}
+      {frame && <ReviewFrame alt={`Still from ${page.label}`} src={frame} />}
     </div>
   );
 }
