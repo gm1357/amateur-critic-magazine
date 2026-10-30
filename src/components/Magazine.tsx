@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { IssueProvider } from '../issue';
 import { articles, findPageIndex, nearestPage } from '../pages';
+import { headOf } from '../seo';
 import { anchorOf, planTurn, spreadAt, spreadCount, spreadFolio, spreadOf } from '../spread';
 import { useFlip } from '../useFlip';
 import { useMode } from '../useMode';
@@ -10,8 +11,9 @@ import { useTypeset } from '../useTypeset';
 import { useZoom } from '../useZoom';
 import ComposingRoom from './ComposingRoom';
 import DeskPicker from './DeskPicker';
-import { LEAF } from './Leaf';
+import { DESK, LEAF } from './Leaf';
 import NotFound from './NotFound';
+import PageHead, { MissingHead } from './PageHead';
 import PageNav from './PageNav';
 import Spread from './Spread';
 import TurnZone from './TurnZone';
@@ -19,12 +21,6 @@ import TurnLayer from './TurnLayer';
 import ZoomControls from './ZoomControls';
 
 const EDITABLE = /^(?:INPUT|TEXTAREA|SELECT)$/;
-
-// Clipped on both axes. A leaf in the air projects well past the book under perspective,
-// and nothing on the desk is ever meant to scroll the page: overflow reaching the document
-// grew it a scrollbar mid-turn, which narrowed the desk and typeset the issue again.
-const DESK =
-  'magazine-desk flex min-h-svh flex-col items-center justify-center overflow-clip desk-surface p-(--sheet-gutter) print:block print:p-0';
 
 export default function Magazine() {
   const { pathname } = useLocation();
@@ -79,7 +75,8 @@ export default function Magazine() {
   //
   // Only once the issue has been counted, though: before that every article is one leaf
   // long, and every continued page in the magazine looks like a page that does not exist.
-  const stranded = settled && index < 0 ? nearestPage(pages, pathname)?.path : undefined;
+  const nearest = index < 0 ? nearestPage(pages, pathname) : undefined;
+  const stranded = settled ? nearest?.path : undefined;
   useEffect(() => {
     if (stranded) navigate(stranded, { replace: true });
   }, [navigate, stranded]);
@@ -113,8 +110,14 @@ export default function Magazine() {
     ? planTurn(resting, spreadAt(mode, pages, turning.to), turning.direction)
     : undefined;
 
+  // The article under the URL, not the pages on the desk: a spread has two of those. A
+  // continued page looks missing until the issue has been counted, and a crawler that
+  // catches it then has to find the article's head rather than a `noindex`.
+  const current = index < 0 ? nearest : pages[index];
+
   return (
     <IssueProvider value={pages}>
+      {current ? <PageHead head={headOf(current.article)} /> : <MissingHead />}
       <div
         className={DESK}
         data-desk={deskTheme}

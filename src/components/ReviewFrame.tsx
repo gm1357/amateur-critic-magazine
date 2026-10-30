@@ -15,8 +15,9 @@ function footOf(masthead: HTMLElement, leaf: HTMLElement): number | undefined {
   return foot;
 }
 
-// The still behind a review's masthead. It is decoration — the masthead in front of it
-// already says which film this is — so it is kept out of the accessibility tree.
+// The still behind a review's masthead. It is named for the film it comes from, so it can be
+// found as a picture of that film. The scrim over it is decoration and stays out of the
+// accessibility tree.
 //
 // How deep it runs depends on how the title wraps, which only layout knows, so it is
 // measured — once when it is printed and again whenever the masthead or the leaf changes
@@ -30,7 +31,7 @@ function footOf(masthead: HTMLElement, leaf: HTMLElement): number | undefined {
 // it is what lets the type stay light and readable on any frame. It deepens towards the
 // foot, where the score and dateline sit in the smallest type and the photograph meets
 // the page — so the still settles into the paper rather than stopping at a hard edge.
-export default function ReviewFrame({ src }: { src: string }) {
+export default function ReviewFrame({ alt, src }: { alt: string; src: string }) {
   const frame = useRef<HTMLDivElement>(null);
 
   // Keyed on the film, so a leaf that is handed a different review finds its masthead anew.
@@ -56,9 +57,18 @@ export default function ReviewFrame({ src }: { src: string }) {
   }, [src]);
 
   return (
-    <div aria-hidden="true" className="review-frame" data-frame ref={frame}>
-      <img alt="" className="absolute inset-0 size-full object-cover" decoding="async" src={src} />
-      <div className="absolute inset-0 bg-linear-to-b from-black/25 to-black/70" data-scrim />
+    <div className="review-frame" data-frame ref={frame}>
+      <img
+        alt={alt}
+        className="absolute inset-0 size-full object-cover"
+        decoding="async"
+        src={src}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-linear-to-b from-black/25 to-black/70"
+        data-scrim
+      />
     </div>
   );
 }

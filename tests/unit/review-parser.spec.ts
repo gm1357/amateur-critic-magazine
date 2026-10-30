@@ -90,3 +90,21 @@ test('non-objects are rejected', () => {
   expect(() => parseReview(null, 'heat.json', 'heat')).toThrow(/JSON object/);
   expect(() => parseReview([], 'heat.json', 'heat')).toThrow(/JSON object/);
 });
+
+test('a year is optional', () => {
+  expect(parseReview(valid, 'heat.json', 'heat').year).toBeUndefined();
+  expect(parseReview({ ...valid, year: 1995 }, 'heat.json', 'heat').year).toBe(1995);
+});
+
+test('a year that is not a whole number names both the file and the field', () => {
+  for (const year of ['1995', 1995.5]) {
+    const data = { ...valid, year };
+
+    expect(() => parseReview(data, 'heat.json', 'heat')).toThrow(/heat\.json/);
+    expect(() => parseReview(data, 'heat.json', 'heat')).toThrow(/"year"/);
+  }
+});
+
+test('a year from before cinema is rejected', () => {
+  expect(() => parseReview({ ...valid, year: 95 }, 'heat.json', 'heat')).toThrow(/"year"/);
+});

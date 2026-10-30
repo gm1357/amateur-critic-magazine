@@ -1,6 +1,7 @@
 export type Review = {
   slug: string;
   movie: string;
+  year?: number;
   score: number;
   date: string;
   hearted: boolean;
@@ -12,6 +13,11 @@ export type Review = {
 const SCORE_MIN = 1;
 const SCORE_MAX = 10;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+// When the film first screened, festivals included, which is what tells apart the several
+// films that share a title. Optional because nothing is printed from it.
+const YEAR_MIN = 1888;
+const YEAR_MAX = 9999;
 
 function describe(value: unknown): string {
   if (value === null) return 'null';
@@ -68,6 +74,17 @@ function requireDate(value: unknown, file: string): string {
   return value;
 }
 
+function requireYear(value: unknown, file: string): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isInteger(value)) {
+    fail(file, `field "year" must be a whole number, got ${describe(value)}`);
+  }
+  if (value < YEAR_MIN || value > YEAR_MAX) {
+    fail(file, `field "year" must be between ${YEAR_MIN} and ${YEAR_MAX}, got ${value}`);
+  }
+  return value;
+}
+
 export function parseReview(data: unknown, file: string, slug: string): Review {
   if (typeof data !== 'object' || data === null || Array.isArray(data)) {
     fail(file, `expected a JSON object, got ${describe(data)}`);
@@ -78,6 +95,7 @@ export function parseReview(data: unknown, file: string, slug: string): Review {
   return {
     slug,
     movie: requireText(raw.movie, 'movie', file),
+    year: requireYear(raw.year, file),
     score: requireScore(raw.score, file),
     date: requireDate(raw.date, file),
     hearted: requireFlag(raw.hearted, 'hearted', file),

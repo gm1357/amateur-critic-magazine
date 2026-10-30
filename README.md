@@ -23,5 +23,5 @@ npx playwright install   # browsers for the browser tests
 npm run dev        # dev server
 npm run check      # format, types, lint
 npm run test:all   # unit tests, then browser tests
-npm run build      # type-check and build for production
+npm run build      # type-check, build for production, prerender every article
 ```

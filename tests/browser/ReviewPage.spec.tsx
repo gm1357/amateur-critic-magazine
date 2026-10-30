@@ -191,11 +191,11 @@ test('a review with a frame prints it behind the masthead, down to its rule', as
   expect(still.right).toBeCloseTo(paper.left + leaf.clientLeft + leaf.clientWidth, 0);
   expect(Math.abs(still.bottom - masthead.bottom)).toBeLessThanOrEqual(1);
 
-  // Cropped to fill rather than stretched, and kept out of the accessibility tree.
+  // Cropped to fill rather than stretched, and named for the film it comes from.
   const image = stills[0].querySelector('img')!;
   expect(getComputedStyle(image).objectFit).toBe('cover');
-  expect(image.getAttribute('alt')).toBe('');
-  expect(stills[0].getAttribute('aria-hidden')).toBe('true');
+  expect(image.getAttribute('alt')).toBe(`Still from ${framed.movie}`);
+  expect(stills[0].querySelector('[data-scrim]')!.getAttribute('aria-hidden')).toBe('true');
 
   // The scrim starts light enough to show the photograph and deepens towards the rule.
   const scrim = getComputedStyle(stills[0].querySelector('[data-scrim]')!).backgroundImage;

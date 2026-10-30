@@ -9,7 +9,7 @@ A movie-review aggregator that reads like a print magazine: `/` is the cover, `/
 ## Commands
 
 - `npm run dev` — start Vite dev server
-- `npm run build` — type-check, then build for production
+- `npm run build` — type-check, build for production, then prerender every article into `dist/`
 - `npm run check` — run `fmt:check`, `typecheck`, and `lint` together
 - `npm run fmt` — format with Oxfmt
 - `npm run test:unit` — run unit tests once
@@ -56,9 +56,17 @@ Run a single Vitest test by name: `npx vitest run -t "<test name>"` (add `--conf
 - Article roots must be **block flow, not flex**. Small flex rows inside them are fine, with `break-inside-avoid`.
 - Re-cutting the issue is not a page turn, and the correction happens **during render, not in an effect**.
 
+### Reaching crawlers
+
+- The build prints every article to HTML through `src/entry-server.tsx` and `scripts/prerender.js`. The client **replaces** that HTML and never hydrates it, because typesetting needs a browser.
+- `src/components/PageHead.tsx` is the one source of head tags, and it renders in `Magazine`, never in a page component: a spread mounts two pages.
+- A tag the build prints into the head must be marked `data-printed`, or it stays beside React's own for good. React only adopts head tags when hydrating.
+- JSON-LD is printed by the build only. In `PageHead` it would land in the body as a second copy.
+- `vercel.json` must not get a catch-all rewrite, which makes every missing page a 200. A new article kind that `flows` needs its own continuation rewrite.
+
 ### Review data
 
-- Reviews are `src/data/reviews/<slug>.json` with `movie`, `score` (whole number, 1–10), `date` (ISO `YYYY-MM-DD`), `review`, and an optional `hearted`. **The filename is the slug.**
+- Reviews are `src/data/reviews/<slug>.json` with `movie`, `score` (whole number, 1–10), `date` (ISO `YYYY-MM-DD`), `review`, and optional `hearted` and `year` (when the film first screened). **The filename is the slug.**
 - A film still is `src/data/frames/<slug>.{avif,jpg,jpeg,png,webp}`.
 - The parser runs at module evaluation, so a malformed JSON passes `vite build` and blanks the page at runtime. `tests/unit/reviews-data.spec.ts` is what catches it.
 
