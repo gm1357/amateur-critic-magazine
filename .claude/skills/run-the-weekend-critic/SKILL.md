@@ -115,7 +115,7 @@ tmux capture-pane -pt twc -S -200 | grep -v '^$' | tail -20
 
 `/` cover, `/contents`, `/introduction`, then `/reviews/<slug>` for each JSON file in
 `src/data/reviews/` (for example `the-drama` or `wake-up-dead-man`), ordered by
-their `watched_date`. A review that runs long continues at `/reviews/<slug>/2`. Anything
+their `published_date`. A review that runs long continues at `/reviews/<slug>/2`. Anything
 else is the 404 — which
 renders a bare leaf with no `data-page`, no running head and no pager, so
 `state` reports `leaves=[] nav=(none)`.

@@ -210,9 +210,8 @@ function feedItem(review: Review): string {
   ].join('\n');
 }
 
-// Newest published first. A feed is read from the top and announces what just went out, so
-// it runs by publication; the magazine is read from the front and runs by when films were
-// watched, which a review published late does not move.
+// Newest published first, which is the reverse of the issue: a feed is read from the top, and
+// a magazine from the front.
 export function feedOf(issue: Review[]): string {
   const newest = issue.toSorted((a, b) => b.publishedDate.localeCompare(a.publishedDate));
 

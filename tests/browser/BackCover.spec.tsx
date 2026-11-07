@@ -56,7 +56,7 @@ test('it teases the issue with its best-scored reviews', async () => {
 // magazine actually contains.
 test('the imprint prints the price, the issue and the year of its last review', async () => {
   const screen = await renderBackCover();
-  const year = reviews[reviews.length - 1].watchedDate.slice(0, 4);
+  const year = reviews[reviews.length - 1].publishedDate.slice(0, 4);
 
   await expect.element(screen.getByText('Free')).toBeVisible();
   await expect.element(screen.getByText(ISSUE)).toBeVisible();
@@ -67,8 +67,8 @@ test('the imprint prints the price, the issue and the year of its last review', 
 // role engine — but the digits under it are the issue's own span and are worth printing.
 test('the barcode prints the span of the issue and is not announced', async () => {
   const screen = await renderBackCover();
-  const opened = reviews[0].watchedDate.replaceAll('-', '');
-  const closed = reviews[reviews.length - 1].watchedDate.replaceAll('-', '');
+  const opened = reviews[0].publishedDate.replaceAll('-', '');
+  const closed = reviews[reviews.length - 1].publishedDate.replaceAll('-', '');
 
   await expect.element(screen.getByText(`${opened} ${closed}`)).toBeVisible();
   expect(

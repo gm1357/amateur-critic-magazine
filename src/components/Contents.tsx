@@ -60,7 +60,7 @@ export default function Contents() {
         <Entry path={INTRODUCTION_PATH} title="Introduction" />
         {reviews.map((review) => (
           <Entry
-            date={review.watchedDate}
+            date={review.publishedDate}
             key={review.slug}
             path={reviewPath(review.slug)}
             title={review.movie}

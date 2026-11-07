@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { findReview, reviews, topReviews } from '../../src/data/reviews';
+import { byIssueOrder, findReview, reviews, topReviews } from '../../src/data/reviews';
 import type { Review } from '../../src/data/review';
 import {
   type Article,
@@ -65,10 +65,26 @@ test('every score is a whole number from 1 to 10', () => {
   }
 });
 
-test('reviews run oldest watched first', () => {
-  const dates = reviews.map((review) => review.watchedDate);
+test('reviews run oldest published first', () => {
+  const dates = reviews.map((review) => review.publishedDate);
 
   expect(dates).toEqual([...dates].sort());
+});
+
+// A film watched first but written up last goes to the back of the issue, where a new review
+// is always added, rather than in among the films watched around it.
+test('issue order is by publication, not by when the film was watched', () => {
+  const late = { ...reviewOf('late'), watchedDate: '2026-01-01', publishedDate: '2026-03-03' };
+  const prompt = { ...reviewOf('prompt'), watchedDate: '2026-02-02', publishedDate: '2026-02-02' };
+
+  expect([late, prompt].sort(byIssueOrder)).toEqual([prompt, late]);
+});
+
+test('reviews published on one day fall back to the slug', () => {
+  const b = reviewOf('b');
+  const a = reviewOf('a');
+
+  expect([b, a].sort(byIssueOrder)).toEqual([a, b]);
 });
 
 // The back cover teases the issue by verdict. Asserted as properties rather than against
@@ -97,9 +113,9 @@ test('topReviews breaks ties by issue order, not by glob order', () => {
     const previous = top[index];
     if (previous.score !== review.score) continue;
 
-    // Same score: the one watched first leads, and two on one day fall back to the slug.
+    // Same score: the one published first leads, and two on one day fall back to the slug.
     expect(
-      previous.watchedDate < review.watchedDate || previous.slug.localeCompare(review.slug) < 0,
+      previous.publishedDate < review.publishedDate || previous.slug.localeCompare(review.slug) < 0,
     ).toBe(true);
   }
 });
