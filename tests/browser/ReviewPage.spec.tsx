@@ -120,17 +120,26 @@ test('a path outside the magazine gets the not-found page too', async () => {
     .toHaveTextContent('This page was never printed');
 });
 
-test('the dateline is human-readable and carries the raw ISO date', async () => {
+// Captions and dates are read in pairs, so a test that only checked the captions were there
+// would pass with the two dates swapped under them.
+test('the masthead captions the watched and the published date, each human-readable', async () => {
   const screen = await render(
     <MemoryRouter initialEntries={[`/reviews/${review.slug}`]}>
       <App />
     </MemoryRouter>,
   );
 
-  const dateline = screen.getByText(/^\d+ \w+ \d+$/);
-  const movieDate = new Date(review.watchedDate);
+  for (const [caption, date] of [
+    ['Watched', review.watchedDate],
+    ['Published', review.publishedDate],
+  ]) {
+    const term = screen.getByRole('term').filter({ hasText: caption });
+    await expect.element(term).toBeVisible();
 
-  await expect.element(dateline).toHaveAttribute('datetime', movieDate.toISOString().split('T')[0]);
+    const dateline = term.element().nextElementSibling!.querySelector('time')!;
+    expect(dateline.getAttribute('datetime')).toBe(date);
+    expect(dateline.textContent).toMatch(/^\d+ \w+ \d+$/);
+  }
 });
 
 test('a hearted review is stamped with a seal in the corner of the page', async () => {

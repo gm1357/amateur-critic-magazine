@@ -20,7 +20,15 @@ import { anchorOf, spreadAt, spreadOf } from '../../src/spread';
 // buildArticles only reads slug and movie off a review, so a fake one only needs to look
 // like one — the rest of the fields are irrelevant to pagination.
 function reviewOf(slug: string): Review {
-  return { slug, movie: slug, score: 5, watchedDate: '2026-01-01', hearted: false, text: 'Body.' };
+  return {
+    slug,
+    movie: slug,
+    score: 5,
+    watchedDate: '2026-01-01',
+    publishedDate: '2026-01-01',
+    hearted: false,
+    text: 'Body.',
+  };
 }
 
 // The issue as it comes off a composing room that found everything fits on one leaf.

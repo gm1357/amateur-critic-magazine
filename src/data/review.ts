@@ -4,6 +4,7 @@ export type Review = {
   year?: number;
   score: number;
   watchedDate: string;
+  publishedDate: string;
   hearted: boolean;
   text: string;
 };
@@ -74,6 +75,16 @@ function requireDate(value: unknown, field: string, file: string): string {
   return value;
 }
 
+// A review is written up after the film, never before it, so a publication date ahead of
+// the screening is a typo in one of the two.
+function requirePublished(value: unknown, watched: string, file: string): string {
+  const published = requireDate(value, 'published_date', file);
+  if (published < watched) {
+    fail(file, `field "published_date" (${published}) is before "watched_date" (${watched})`);
+  }
+  return published;
+}
+
 function requireYear(value: unknown, file: string): number | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== 'number' || !Number.isInteger(value)) {
@@ -91,13 +102,15 @@ export function parseReview(data: unknown, file: string, slug: string): Review {
   }
 
   const raw = data as Record<string, unknown>;
+  const watchedDate = requireDate(raw.watched_date, 'watched_date', file);
 
   return {
     slug,
     movie: requireText(raw.movie, 'movie', file),
     year: requireYear(raw.year, file),
     score: requireScore(raw.score, file),
-    watchedDate: requireDate(raw.watched_date, 'watched_date', file),
+    watchedDate,
+    publishedDate: requirePublished(raw.published_date, watchedDate, file),
     hearted: requireFlag(raw.hearted, 'hearted', file),
     text: requireText(raw.review, 'review', file),
   };

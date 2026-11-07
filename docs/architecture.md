@@ -72,10 +72,11 @@ A movie-review aggregator that reads like a print magazine: `/` is the cover, `/
 
 ## Review data
 
-- Reviews are JSON files in `src/data/reviews/<slug>.json` with `movie`, `score`, `watched_date` (ISO `YYYY-MM-DD`, the day the film was watched), `review`, and optional `hearted` and `year`. **The filename is the slug.**
+- Reviews are JSON files in `src/data/reviews/<slug>.json` with `movie`, `score`, `watched_date` (ISO `YYYY-MM-DD`, the day the film was watched), `published_date` (the day the review went out, never before `watched_date`), `review`, and optional `hearted` and `year`. **The filename is the slug.**
 - `year` is when the film first screened, festivals included, so one rule covers a film that premiered a year before it opened. Nothing is printed from it. It goes into the page title, the feed and the structured data, because _Clue_ or _Holland_ alone does not say which film this is.
 - `hearted` is a boolean: it comes from a marker that is present or absent, so an absent field means "not hearted" rather than a malformed review. `parseReview` normalises it to `false`.
 - `score` is a **whole number from 1 to 10**, rendered by `ScoreBadge` as five stars at one point per half star. The half star is a clip, not a glyph: two identical star rows are stacked and the filled one is clipped to `score * 10`% of the width, so the cut always lands on a glyph edge or its exact midpoint. The badge carries `role="img"` with an `aria-label` of `"<score> out of 10"` — that label is what tests locate it by.
+- The review page prints both dates under captions, always, even when they are the same day, so every masthead is the same depth. The issue is ordered, and the contents and back cover are dated, by `watched_date`.
 - `src/data/reviews.ts` picks them up with `import.meta.glob({ eager: true })` and sorts by `watched_date` ascending, tie-broken by slug (glob key order is not stable across platforms).
 - `src/data/review.ts` hand-rolls validation and throws naming the offending file and field. Date checking is two-step — an ISO shape test plus a `Date` round-trip — because `new Date('2026-02-31')` silently rolls over rather than failing.
 - Because the glob is eager, the parser runs at **module evaluation**, so a malformed JSON does not fail `vite build` — it blanks the page at runtime. `tests/unit/reviews-data.spec.ts` imports the real `reviews` array specifically to turn that into a failing test run.

@@ -5,7 +5,15 @@ import { articles, BACK_PATH, buildArticles, pages } from '../../src/pages';
 import { excerptOf, feedOf, headOf, jsonLdOf, sitemapOf } from '../../src/seo';
 
 function reviewOf(slug: string, watchedDate: string): Review {
-  return { slug, movie: slug, score: 5, watchedDate, hearted: false, text: 'Body.' };
+  return {
+    slug,
+    movie: slug,
+    score: 5,
+    watchedDate,
+    publishedDate: watchedDate,
+    hearted: false,
+    text: 'Body.',
+  };
 }
 
 const issue = [reviewOf('older', '2026-01-01'), reviewOf('newer', '2026-02-02')];
