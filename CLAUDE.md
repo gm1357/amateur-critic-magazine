@@ -66,7 +66,7 @@ Run a single Vitest test by name: `npx vitest run -t "<test name>"` (add `--conf
 
 ### Review data
 
-- Reviews are `src/data/reviews/<slug>.json` with `movie`, `score` (whole number, 1–10), `date` (ISO `YYYY-MM-DD`), `review`, and optional `hearted` and `year` (when the film first screened). **The filename is the slug.**
+- Reviews are `src/data/reviews/<slug>.json` with `movie`, `score` (whole number, 1–10), `watched_date` (ISO `YYYY-MM-DD`), `review`, and optional `hearted` and `year` (when the film first screened). **The filename is the slug.**
 - A film still is `src/data/frames/<slug>.{avif,jpg,jpeg,png,webp}`.
 - The parser runs at module evaluation, so a malformed JSON passes `vite build` and blanks the page at runtime. `tests/unit/reviews-data.spec.ts` is what catches it.
 

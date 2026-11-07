@@ -13,11 +13,11 @@ function absolute(path: string): string {
 // is not dated, and a sitemap is better off saying nothing than guessing.
 function lastModified(article: Article, issue: Review[]): string | undefined {
   if (article.kind === 'review') {
-    return issue.find((review) => review.slug === article.slug)?.date;
+    return issue.find((review) => review.slug === article.slug)?.watchedDate;
   }
   if (article.kind === 'cover' || article.kind === 'contents') {
     return issue
-      .map((review) => review.date)
+      .map((review) => review.watchedDate)
       .sort()
       .at(-1);
   }
@@ -88,7 +88,7 @@ function reviewHead(article: Article, review: Review): Head {
     description: excerptOf(review.text),
     image: frame ? absolute(frame) : COVER_IMAGE,
     noindex: false,
-    published: review.date,
+    published: review.watchedDate,
     title: `${filmOf(review)} review: ${review.score}/10 · ${MAGAZINE_TITLE}`,
   };
 }
@@ -151,7 +151,7 @@ function reviewData(article: Article, review: Review): object {
     '@context': 'https://schema.org',
     '@type': 'Review',
     author: AUTHOR_PERSON,
-    datePublished: review.date,
+    datePublished: review.watchedDate,
     itemReviewed: {
       '@type': 'Movie',
       ...(review.year && { datePublished: String(review.year) }),
@@ -204,7 +204,7 @@ function feedItem(review: Review): string {
     `      <title>${escaped(`${filmOf(review)} review`)}</title>`,
     `      <link>${link}</link>`,
     `      <guid>${link}</guid>`,
-    `      <pubDate>${new Date(review.date).toUTCString()}</pubDate>`,
+    `      <pubDate>${new Date(review.watchedDate).toUTCString()}</pubDate>`,
     `      <description>${escaped(excerptOf(review.text))}</description>`,
     '    </item>',
   ].join('\n');
@@ -213,7 +213,7 @@ function feedItem(review: Review): string {
 // Newest first, which is the reverse of the issue: a feed is read from the top, and a magazine
 // from the front.
 export function feedOf(issue: Review[]): string {
-  const newest = issue.toSorted((a, b) => b.date.localeCompare(a.date));
+  const newest = issue.toSorted((a, b) => b.watchedDate.localeCompare(a.watchedDate));
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',

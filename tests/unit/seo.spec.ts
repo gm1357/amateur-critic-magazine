@@ -4,8 +4,8 @@ import { reviews } from '../../src/data/reviews';
 import { articles, BACK_PATH, buildArticles, pages } from '../../src/pages';
 import { excerptOf, feedOf, headOf, jsonLdOf, sitemapOf } from '../../src/seo';
 
-function reviewOf(slug: string, date: string): Review {
-  return { slug, movie: slug, score: 5, date, hearted: false, text: 'Body.' };
+function reviewOf(slug: string, watchedDate: string): Review {
+  return { slug, movie: slug, score: 5, watchedDate, hearted: false, text: 'Body.' };
 }
 
 const issue = [reviewOf('older', '2026-01-01'), reviewOf('newer', '2026-02-02')];
@@ -79,7 +79,7 @@ test('a review is headed with its film, its verdict and its still', () => {
   );
   expect(head.canonical).toBe(`https://weekendcritic.com/reviews/${review.slug}`);
   expect(head.description).toBe(excerptOf(review.text));
-  expect(head.published).toBe(review.date);
+  expect(head.published).toBe(review.watchedDate);
   expect(head.image).toMatch(/^https:\/\/weekendcritic\.com\//);
   expect(head.noindex).toBe(false);
 });
@@ -124,7 +124,7 @@ test('a review is described as a rated review of a film', () => {
   expect(data).toMatchObject({
     '@type': 'Review',
     author: { '@type': 'Person', name: 'Gabriel Machado' },
-    datePublished: review.date,
+    datePublished: review.watchedDate,
     itemReviewed: { '@type': 'Movie', name: review.movie, datePublished: String(review.year) },
     reviewBody: review.text,
     reviewRating: { bestRating: 10, ratingValue: review.score, worstRating: 1 },

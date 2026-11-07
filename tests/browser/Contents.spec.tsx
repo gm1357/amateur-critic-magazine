@@ -50,7 +50,7 @@ test('each review entry links to its review and dates it', async () => {
     const review = reviews[index];
 
     expect(entry.querySelector('a')?.getAttribute('href')).toBe(`/reviews/${review.slug}`);
-    expect(entry.querySelector('time')?.getAttribute('datetime')).toBe(review.date);
+    expect(entry.querySelector('time')?.getAttribute('datetime')).toBe(review.watchedDate);
   });
 });
 

@@ -10,10 +10,14 @@ function fileNameOf(path: string): string {
 }
 
 // Oldest first, tie-broken by slug. Glob key order is not guaranteed stable across
-// platforms, and two reviews sharing a date would otherwise be free to swap page numbers
+// platforms, and two reviews watched on one day would otherwise be free to swap page numbers
 // between a local run and CI — so every ordering in the issue ends up here.
 function byIssueOrder(a: Review, b: Review): number {
-  return a.date < b.date ? -1 : a.date > b.date ? 1 : a.slug.localeCompare(b.slug);
+  return a.watchedDate < b.watchedDate
+    ? -1
+    : a.watchedDate > b.watchedDate
+      ? 1
+      : a.slug.localeCompare(b.slug);
 }
 
 function loadReviews(): Review[] {
@@ -30,7 +34,7 @@ function loadReviews(): Review[] {
     seen.add(review.slug);
   }
 
-  // Oldest first, so paging forward moves forward in time. ISO date strings compare
+  // Oldest watched first, so paging forward moves forward in time. ISO date strings compare
   // correctly as strings.
   loaded.sort(byIssueOrder);
 

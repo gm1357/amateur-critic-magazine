@@ -20,7 +20,7 @@ import { anchorOf, spreadAt, spreadOf } from '../../src/spread';
 // buildArticles only reads slug and movie off a review, so a fake one only needs to look
 // like one — the rest of the fields are irrelevant to pagination.
 function reviewOf(slug: string): Review {
-  return { slug, movie: slug, score: 5, date: '2026-01-01', hearted: false, text: 'Body.' };
+  return { slug, movie: slug, score: 5, watchedDate: '2026-01-01', hearted: false, text: 'Body.' };
 }
 
 // The issue as it comes off a composing room that found everything fits on one leaf.
@@ -57,8 +57,8 @@ test('every score is a whole number from 1 to 10', () => {
   }
 });
 
-test('reviews run oldest first', () => {
-  const dates = reviews.map((review) => review.date);
+test('reviews run oldest watched first', () => {
+  const dates = reviews.map((review) => review.watchedDate);
 
   expect(dates).toEqual([...dates].sort());
 });
@@ -89,8 +89,10 @@ test('topReviews breaks ties by issue order, not by glob order', () => {
     const previous = top[index];
     if (previous.score !== review.score) continue;
 
-    // Same score: the older review leads, and two on one date fall back to the slug.
-    expect(previous.date < review.date || previous.slug.localeCompare(review.slug) < 0).toBe(true);
+    // Same score: the one watched first leads, and two on one day fall back to the slug.
+    expect(
+      previous.watchedDate < review.watchedDate || previous.slug.localeCompare(review.slug) < 0,
+    ).toBe(true);
   }
 });
 

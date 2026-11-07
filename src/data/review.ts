@@ -3,7 +3,7 @@ export type Review = {
   movie: string;
   year?: number;
   score: number;
-  date: string;
+  watchedDate: string;
   hearted: boolean;
   text: string;
 };
@@ -60,16 +60,16 @@ function requireFlag(value: unknown, field: string, file: string): boolean {
   return value;
 }
 
-function requireDate(value: unknown, file: string): string {
+function requireDate(value: unknown, field: string, file: string): string {
   if (typeof value !== 'string' || !ISO_DATE.test(value)) {
-    fail(file, `field "date" must be an ISO date like "2026-03-22", got ${describe(value)}`);
+    fail(file, `field "${field}" must be an ISO date like "2026-03-22", got ${describe(value)}`);
   }
   // Date-only strings parse as UTC midnight, so toISOString().slice(0, 10) round-trips
   // exactly — which is what catches impossible dates like 2026-02-31 that Date would
   // otherwise silently roll over into the next month.
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
-    fail(file, `field "date" is not a real calendar date: "${value}"`);
+    fail(file, `field "${field}" is not a real calendar date: "${value}"`);
   }
   return value;
 }
@@ -97,7 +97,7 @@ export function parseReview(data: unknown, file: string, slug: string): Review {
     movie: requireText(raw.movie, 'movie', file),
     year: requireYear(raw.year, file),
     score: requireScore(raw.score, file),
-    date: requireDate(raw.date, file),
+    watchedDate: requireDate(raw.watched_date, 'watched_date', file),
     hearted: requireFlag(raw.hearted, 'hearted', file),
     text: requireText(raw.review, 'review', file),
   };

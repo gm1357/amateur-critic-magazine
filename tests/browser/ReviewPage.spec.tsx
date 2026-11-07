@@ -128,7 +128,7 @@ test('the dateline is human-readable and carries the raw ISO date', async () => 
   );
 
   const dateline = screen.getByText(/^\d+ \w+ \d+$/);
-  const movieDate = new Date(review.date);
+  const movieDate = new Date(review.watchedDate);
 
   await expect.element(dateline).toHaveAttribute('datetime', movieDate.toISOString().split('T')[0]);
 });
