@@ -8,16 +8,16 @@ function absolute(path: string): string {
   return `${SITE_URL}${path === '/' ? '' : path}`;
 }
 
-// When an article last changed, as far as the issue knows. A review is as old as its own
-// date, and the cover and the contents change whenever a review is added. The introduction
+// When an article last changed, as far as the issue knows. A review is as old as the day it
+// was published, and the cover and the contents change whenever a review is published. The introduction
 // is not dated, and a sitemap is better off saying nothing than guessing.
 function lastModified(article: Article, issue: Review[]): string | undefined {
   if (article.kind === 'review') {
-    return issue.find((review) => review.slug === article.slug)?.watchedDate;
+    return issue.find((review) => review.slug === article.slug)?.publishedDate;
   }
   if (article.kind === 'cover' || article.kind === 'contents') {
     return issue
-      .map((review) => review.watchedDate)
+      .map((review) => review.publishedDate)
       .sort()
       .at(-1);
   }
@@ -88,7 +88,7 @@ function reviewHead(article: Article, review: Review): Head {
     description: excerptOf(review.text),
     image: frame ? absolute(frame) : COVER_IMAGE,
     noindex: false,
-    published: review.watchedDate,
+    published: review.publishedDate,
     title: `${filmOf(review)} review: ${review.score}/10 · ${MAGAZINE_TITLE}`,
   };
 }
@@ -151,7 +151,7 @@ function reviewData(article: Article, review: Review): object {
     '@context': 'https://schema.org',
     '@type': 'Review',
     author: AUTHOR_PERSON,
-    datePublished: review.watchedDate,
+    datePublished: review.publishedDate,
     itemReviewed: {
       '@type': 'Movie',
       ...(review.year && { datePublished: String(review.year) }),
