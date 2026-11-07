@@ -39,25 +39,11 @@ export default function ReviewPage({ slug }: { slug: string }) {
           <span className="text-balance">{review.movie}</span>
           {review.hearted && <SealOfApproval />}
         </h1>
-        {/* Both dates are always printed, even when they are the same day, so every
-            masthead keeps the same depth. Each is captioned above, since two bare dates side
-            by side would not say which is which. */}
-        <div className="mt-[2.5cqw] flex flex-wrap items-end gap-x-[4cqw] gap-y-[2cqw] border-b border-rule pb-[3cqw]">
+        {/* Only the day the review went out is printed: it is the date the issue is
+            ordered by. The watched date stays in the data. */}
+        <div className="mt-[2.5cqw] flex flex-wrap items-center gap-[2cqw] border-b border-rule pb-[3cqw]">
           <ScoreBadge score={review.score} />
-          <dl className="flex gap-x-[4cqw]">
-            <div>
-              <dt className="text-[0.6em] tracking-[0.2em] text-muted uppercase">Watched</dt>
-              <dd className="mt-[0.5cqw]">
-                <Dateline date={review.watchedDate} />
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[0.6em] tracking-[0.2em] text-muted uppercase">Published</dt>
-              <dd className="mt-[0.5cqw]">
-                <Dateline date={review.publishedDate} />
-              </dd>
-            </div>
-          </dl>
+          <Dateline date={review.publishedDate} />
         </div>
       </header>
 

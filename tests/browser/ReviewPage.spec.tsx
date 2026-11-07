@@ -120,26 +120,23 @@ test('a path outside the magazine gets the not-found page too', async () => {
     .toHaveTextContent('This page was never printed');
 });
 
-// Captions and dates are read in pairs, so a test that only checked the captions were there
-// would pass with the two dates swapped under them.
-test('the masthead captions the watched and the published date, each human-readable', async () => {
+// The watched date is kept in the data, but the masthead prints only the day the review was
+// published, bare, with no caption. A review written up after the day it was watched is the
+// one that tells the two dates apart.
+test('the dateline is the published date, human-readable, with the raw ISO date', async () => {
+  const late = reviews.find((entry) => entry.publishedDate !== entry.watchedDate) ?? review;
   const screen = await render(
-    <MemoryRouter initialEntries={[`/reviews/${review.slug}`]}>
+    <MemoryRouter initialEntries={[`/reviews/${late.slug}`]}>
       <App />
     </MemoryRouter>,
   );
 
-  for (const [caption, date] of [
-    ['Watched', review.watchedDate],
-    ['Published', review.publishedDate],
-  ]) {
-    const term = screen.getByRole('term').filter({ hasText: caption });
-    await expect.element(term).toBeVisible();
+  const dateline = screen.getByText(/^\d+ \w+ \d+$/);
 
-    const dateline = term.element().nextElementSibling!.querySelector('time')!;
-    expect(dateline.getAttribute('datetime')).toBe(date);
-    expect(dateline.textContent).toMatch(/^\d+ \w+ \d+$/);
-  }
+  await expect.element(dateline).toHaveAttribute('datetime', late.publishedDate);
+  await expect.element(screen.getByRole('term')).not.toBeInTheDocument();
+  await expect.element(screen.getByText('Watched', { exact: true })).not.toBeInTheDocument();
+  await expect.element(screen.getByText('Published', { exact: true })).not.toBeInTheDocument();
 });
 
 test('a hearted review is stamped with a seal in the corner of the page', async () => {
