@@ -158,6 +158,14 @@ test('the feed runs newest first', () => {
   expect(feed.indexOf('/reviews/newer')).toBeLessThan(feed.indexOf('/reviews/older'));
 });
 
+// Watched first, published last: the feed leads with what just went out, not what was seen.
+test('the feed runs by publication, not by when the film was watched', () => {
+  const late = { ...reviewOf('late', '2026-01-01'), publishedDate: '2026-03-03' };
+  const feed = feedOf([late, reviewOf('prompt', '2026-02-02')]);
+
+  expect(feed.indexOf('/reviews/late')).toBeLessThan(feed.indexOf('/reviews/prompt'));
+});
+
 test('the feed carries every review', () => {
   expect(feedOf(reviews).match(/<item>/g)).toHaveLength(reviews.length);
 });
@@ -168,6 +176,13 @@ test('a feed entry names its film and dates its review in the RSS format', () =>
   expect(feed).toContain('<title>Heat (1995) review</title>');
   expect(feed).toContain('<link>https://weekendcritic.com/reviews/heat</link>');
   expect(feed).toContain('<pubDate>Wed, 14 Jan 2026 00:00:00 GMT</pubDate>');
+});
+
+test('a feed entry is dated by when the review was published', () => {
+  const feed = feedOf([{ ...reviewOf('heat', '2026-01-14'), publishedDate: '2026-02-05' }]);
+
+  expect(feed).toContain('<pubDate>Thu, 05 Feb 2026 00:00:00 GMT</pubDate>');
+  expect(feed).not.toContain('14 Jan 2026');
 });
 
 test('the feed escapes what would break the XML', () => {

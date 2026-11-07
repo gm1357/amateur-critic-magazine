@@ -204,16 +204,17 @@ function feedItem(review: Review): string {
     `      <title>${escaped(`${filmOf(review)} review`)}</title>`,
     `      <link>${link}</link>`,
     `      <guid>${link}</guid>`,
-    `      <pubDate>${new Date(review.watchedDate).toUTCString()}</pubDate>`,
+    `      <pubDate>${new Date(review.publishedDate).toUTCString()}</pubDate>`,
     `      <description>${escaped(excerptOf(review.text))}</description>`,
     '    </item>',
   ].join('\n');
 }
 
-// Newest first, which is the reverse of the issue: a feed is read from the top, and a magazine
-// from the front.
+// Newest published first. A feed is read from the top and announces what just went out, so
+// it runs by publication; the magazine is read from the front and runs by when films were
+// watched, which a review published late does not move.
 export function feedOf(issue: Review[]): string {
-  const newest = issue.toSorted((a, b) => b.watchedDate.localeCompare(a.watchedDate));
+  const newest = issue.toSorted((a, b) => b.publishedDate.localeCompare(a.publishedDate));
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
