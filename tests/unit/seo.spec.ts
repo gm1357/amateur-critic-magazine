@@ -4,8 +4,16 @@ import { reviews } from '../../src/data/reviews';
 import { articles, BACK_PATH, buildArticles, pages } from '../../src/pages';
 import { excerptOf, feedOf, headOf, jsonLdOf, sitemapOf } from '../../src/seo';
 
-function reviewOf(slug: string, date: string): Review {
-  return { slug, movie: slug, score: 5, date, hearted: false, text: 'Body.' };
+function reviewOf(slug: string, watchedDate: string): Review {
+  return {
+    slug,
+    movie: slug,
+    score: 5,
+    watchedDate,
+    publishedDate: watchedDate,
+    hearted: false,
+    text: 'Body.',
+  };
 }
 
 const issue = [reviewOf('older', '2026-01-01'), reviewOf('newer', '2026-02-02')];
@@ -32,6 +40,18 @@ test('the sitemap dates the cover and the contents by the newest review', () => 
   expect(sitemap).toContain(
     '<loc>https://weekendcritic.com/contents</loc><lastmod>2026-02-02</lastmod>',
   );
+});
+
+// A review watched long ago and published today changed the cover and the contents today.
+test('the sitemap dates by publication, not by when the film was watched', () => {
+  const late = { ...reviewOf('late', '2026-01-01'), publishedDate: '2026-03-03' };
+  const sitemap = sitemapOf(buildArticles([late]), [late]);
+
+  expect(sitemap).toContain(
+    '<loc>https://weekendcritic.com/reviews/late</loc><lastmod>2026-03-03</lastmod>',
+  );
+  expect(sitemap).toContain('<loc>https://weekendcritic.com</loc><lastmod>2026-03-03</lastmod>');
+  expect(sitemap).not.toContain('2026-01-01');
 });
 
 test('the sitemap leaves the introduction undated', () => {
@@ -79,7 +99,7 @@ test('a review is headed with its film, its verdict and its still', () => {
   );
   expect(head.canonical).toBe(`https://weekendcritic.com/reviews/${review.slug}`);
   expect(head.description).toBe(excerptOf(review.text));
-  expect(head.published).toBe(review.date);
+  expect(head.published).toBe(review.publishedDate);
   expect(head.image).toMatch(/^https:\/\/weekendcritic\.com\//);
   expect(head.noindex).toBe(false);
 });
@@ -124,7 +144,7 @@ test('a review is described as a rated review of a film', () => {
   expect(data).toMatchObject({
     '@type': 'Review',
     author: { '@type': 'Person', name: 'Gabriel Machado' },
-    datePublished: review.date,
+    datePublished: review.publishedDate,
     itemReviewed: { '@type': 'Movie', name: review.movie, datePublished: String(review.year) },
     reviewBody: review.text,
     reviewRating: { bestRating: 10, ratingValue: review.score, worstRating: 1 },
@@ -150,6 +170,14 @@ test('the feed runs newest first', () => {
   expect(feed.indexOf('/reviews/newer')).toBeLessThan(feed.indexOf('/reviews/older'));
 });
 
+// Watched first, published last: the feed leads with what just went out, not what was seen.
+test('the feed runs by publication, not by when the film was watched', () => {
+  const late = { ...reviewOf('late', '2026-01-01'), publishedDate: '2026-03-03' };
+  const feed = feedOf([late, reviewOf('prompt', '2026-02-02')]);
+
+  expect(feed.indexOf('/reviews/late')).toBeLessThan(feed.indexOf('/reviews/prompt'));
+});
+
 test('the feed carries every review', () => {
   expect(feedOf(reviews).match(/<item>/g)).toHaveLength(reviews.length);
 });
@@ -162,6 +190,13 @@ test('a feed entry names its film and dates its review in the RSS format', () =>
   expect(feed).toContain('<pubDate>Wed, 14 Jan 2026 00:00:00 GMT</pubDate>');
 });
 
+test('a feed entry is dated by when the review was published', () => {
+  const feed = feedOf([{ ...reviewOf('heat', '2026-01-14'), publishedDate: '2026-02-05' }]);
+
+  expect(feed).toContain('<pubDate>Thu, 05 Feb 2026 00:00:00 GMT</pubDate>');
+  expect(feed).not.toContain('14 Jan 2026');
+});
+
 test('the feed escapes what would break the XML', () => {
   const feed = feedOf([
     { ...reviewOf('heat', '2026-01-14'), movie: 'Tom & Jerry', text: 'Better <than> most.' },
@@ -169,4 +204,15 @@ test('the feed escapes what would break the XML', () => {
 
   expect(feed).toContain('<title>Tom &amp; Jerry review</title>');
   expect(feed).toContain('<description>Better &lt;than&gt; most.</description>');
+});
+
+// Asserted over the whole issue, so any review published later than it was watched is the
+// case that tells the two dates apart.
+test('every review tells crawlers the day it was published', () => {
+  for (const review of reviews) {
+    const article = articleAt(`/reviews/${review.slug}`);
+
+    expect(headOf(article).published).toBe(review.publishedDate);
+    expect(jsonLdOf(article)).toMatchObject({ datePublished: review.publishedDate });
+  }
 });

@@ -13,8 +13,8 @@ const HIGHLIGHTS = 3;
 // prints under itself, which is the one place on a back cover where a row of digits is
 // the point.
 function spanOf(list: Review[]): { digits: string; year: string } | undefined {
-  const opened = list.at(0)?.date;
-  const closed = list.at(-1)?.date;
+  const opened = list.at(0)?.publishedDate;
+  const closed = list.at(-1)?.publishedDate;
   if (!opened || !closed) return undefined;
 
   return {

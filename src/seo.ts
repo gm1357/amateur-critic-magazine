@@ -8,16 +8,16 @@ function absolute(path: string): string {
   return `${SITE_URL}${path === '/' ? '' : path}`;
 }
 
-// When an article last changed, as far as the issue knows. A review is as old as its own
-// date, and the cover and the contents change whenever a review is added. The introduction
+// When an article last changed, as far as the issue knows. A review is as old as the day it
+// was published, and the cover and the contents change whenever a review is published. The introduction
 // is not dated, and a sitemap is better off saying nothing than guessing.
 function lastModified(article: Article, issue: Review[]): string | undefined {
   if (article.kind === 'review') {
-    return issue.find((review) => review.slug === article.slug)?.date;
+    return issue.find((review) => review.slug === article.slug)?.publishedDate;
   }
   if (article.kind === 'cover' || article.kind === 'contents') {
     return issue
-      .map((review) => review.date)
+      .map((review) => review.publishedDate)
       .sort()
       .at(-1);
   }
@@ -88,7 +88,7 @@ function reviewHead(article: Article, review: Review): Head {
     description: excerptOf(review.text),
     image: frame ? absolute(frame) : COVER_IMAGE,
     noindex: false,
-    published: review.date,
+    published: review.publishedDate,
     title: `${filmOf(review)} review: ${review.score}/10 · ${MAGAZINE_TITLE}`,
   };
 }
@@ -151,7 +151,7 @@ function reviewData(article: Article, review: Review): object {
     '@context': 'https://schema.org',
     '@type': 'Review',
     author: AUTHOR_PERSON,
-    datePublished: review.date,
+    datePublished: review.publishedDate,
     itemReviewed: {
       '@type': 'Movie',
       ...(review.year && { datePublished: String(review.year) }),
@@ -204,16 +204,16 @@ function feedItem(review: Review): string {
     `      <title>${escaped(`${filmOf(review)} review`)}</title>`,
     `      <link>${link}</link>`,
     `      <guid>${link}</guid>`,
-    `      <pubDate>${new Date(review.date).toUTCString()}</pubDate>`,
+    `      <pubDate>${new Date(review.publishedDate).toUTCString()}</pubDate>`,
     `      <description>${escaped(excerptOf(review.text))}</description>`,
     '    </item>',
   ].join('\n');
 }
 
-// Newest first, which is the reverse of the issue: a feed is read from the top, and a magazine
-// from the front.
+// Newest published first, which is the reverse of the issue: a feed is read from the top, and
+// a magazine from the front.
 export function feedOf(issue: Review[]): string {
-  const newest = issue.toSorted((a, b) => b.date.localeCompare(a.date));
+  const newest = issue.toSorted((a, b) => b.publishedDate.localeCompare(a.publishedDate));
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',

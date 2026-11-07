@@ -39,9 +39,11 @@ export default function ReviewPage({ slug }: { slug: string }) {
           <span className="text-balance">{review.movie}</span>
           {review.hearted && <SealOfApproval />}
         </h1>
+        {/* Only the day the review went out is printed: it is the date the issue is
+            ordered by. The watched date stays in the data. */}
         <div className="mt-[2.5cqw] flex flex-wrap items-center gap-[2cqw] border-b border-rule pb-[3cqw]">
           <ScoreBadge score={review.score} />
-          <Dateline date={review.date} />
+          <Dateline date={review.publishedDate} />
         </div>
       </header>
 

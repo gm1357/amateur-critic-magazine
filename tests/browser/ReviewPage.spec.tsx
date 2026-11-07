@@ -120,17 +120,23 @@ test('a path outside the magazine gets the not-found page too', async () => {
     .toHaveTextContent('This page was never printed');
 });
 
-test('the dateline is human-readable and carries the raw ISO date', async () => {
+// The watched date is kept in the data, but the masthead prints only the day the review was
+// published, bare, with no caption. A review written up after the day it was watched is the
+// one that tells the two dates apart.
+test('the dateline is the published date, human-readable, with the raw ISO date', async () => {
+  const late = reviews.find((entry) => entry.publishedDate !== entry.watchedDate) ?? review;
   const screen = await render(
-    <MemoryRouter initialEntries={[`/reviews/${review.slug}`]}>
+    <MemoryRouter initialEntries={[`/reviews/${late.slug}`]}>
       <App />
     </MemoryRouter>,
   );
 
   const dateline = screen.getByText(/^\d+ \w+ \d+$/);
-  const movieDate = new Date(review.date);
 
-  await expect.element(dateline).toHaveAttribute('datetime', movieDate.toISOString().split('T')[0]);
+  await expect.element(dateline).toHaveAttribute('datetime', late.publishedDate);
+  await expect.element(screen.getByRole('term')).not.toBeInTheDocument();
+  await expect.element(screen.getByText('Watched', { exact: true })).not.toBeInTheDocument();
+  await expect.element(screen.getByText('Published', { exact: true })).not.toBeInTheDocument();
 });
 
 test('a hearted review is stamped with a seal in the corner of the page', async () => {
